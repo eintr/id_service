@@ -1,17 +1,17 @@
 
 MOD_NAME=id_service
 
-sources=mod_skel.c id_msg_body.pb-c.c id_msg_header.c
+sources=mod_skel.c id_msg_body.pb-c.c id_msg_header.c id_hasht.c id_api.c id_file.c id_api_listener.c id_msg_proc_get.c
 
 LDFLAGS+=`pkg-config --libs 'libprotobuf-c >= 1.0.0'`
 
 include ../module.inc
 
-prepare: push_msg_body.pb-c.c
+prepare: id_msg_body.pb-c.c
 
-push_msg_body.pb-c.c: push_msg_body.proto
+id_msg_body.pb-c.c: id_msg_body.proto
 	protoc-c --c_out=. $^
 
-test: ../../util_syscall.o ../../util_log.o id_file.c
-	gcc -DTEST $(CFLAGS) -o $@ $^ $(LDFALGS)
+test: ../../cJSON.o ../../util_syscall.o ../../util_log.o ../../ds_hasht.o id_hasht.c id_file.c testmain.c
+	gcc -DTEST $(CFLAGS) -o $@ $^ $(LDFALGS) -pthread -lm
 

@@ -10,6 +10,8 @@
 
 #include <room_service.h>
 
+#include "id_api_listener.h"
+
 #include "mod_config.h"
 struct id_module_config_st id_module_config = {		// Set default values.
 	.snd_api_timeout_ms = 1000,

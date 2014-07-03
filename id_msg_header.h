@@ -1,9 +1,9 @@
-#ifndef PUSH_INTERFACE_H
-#define PUSH_INTERFACE_H
+#ifndef ID_INTERFACE_H
+#define ID_INTERFACE_H
 
 /** \file push_service.h
 	源自：
-http://cr.admin.weibo.com/w/projects/titans/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3/#push
+http://cr.admin.weibo.com/w/projects/titans/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3/#id
 */
 
 /** cond 0 */
@@ -12,20 +12,17 @@ http://cr.admin.weibo.com/w/projects/titans/%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3
 
 #define	PUSH_MSG_VERSION		1
 
-#define CMD_REQ_EST		0x01  // Mobile->PUSH	创建连接
-#define CMD_REQ_HB		0x02  //
-#define CMD_REQ_TOKEN	0x03  // 客户端上传Token
+#define CMD_REQ_ID_CREATE         0x21  // 创建序列请求
+#define CMD_RSP_ID_CREATE         0xb1  // 创建序列回应
 
-#define CMD_CAST_NOTIFY	0x91  // PUSH->Mobile	Notify通知
+#define CMD_REQ_ID_LIST                 0x22  // 列举序列请求
+#define CMD_RSP_ID_LIST                 0xb2  // 列举序列回应
 
-#define CMD_REQ_PUSH	0x11  // SYNC->PUSH	PUSH请求
-#define CMD_RSP_PUSH	0xa1  // PUSH->SYNC	PUSH回应
-
-#define CMD_REQ_SESSCHK	0x12  // PUSH->SYNC	session_id 查询请求
-#define CMD_RSP_SESSCHK	0xa2  // SYNC->PUSH	session_id 查询回应
+#define CMD_REQ_ID_GET                 0x23  // 获取序列号请求
+#define CMD_RSP_ID_GET                 0xb3  // 获取序列号回应
 
 /** Generic push message */ 
-struct push_msg_header_st {
+struct id_msg_header_st {
 	uint32_t version:8;		/**< Message version */
 	uint32_t command:8;		/**< Message command */
 	uint32_t padding:16;	/**< Padding */
@@ -37,8 +34,9 @@ struct push_msg_header_st {
 
 #include <util_conn_tcp.h>
 
-struct push_msg_buf_st {
+struct id_msg_buf_st {
 	uint8_t *buf;
+	struct id_msg_header_st *hdr;	// Always == buf, for convenions.
 	size_t buf_size;
 	size_t len, pos;
 	uint8_t *pb_start;
@@ -52,8 +50,8 @@ enum {
 	RCV_ERROR
 };
 
-int push_msg_recv_generic(conn_tcp_t *conn, struct push_msg_buf_st *b, int version, int command);
-void push_msg_buf_free(struct push_msg_buf_st *b);
+int id_msg_recv_generic(conn_tcp_t *conn, struct id_msg_buf_st *b, int version, int command);
+void id_msg_buf_free(struct id_msg_buf_st *b);
 
 #endif
 

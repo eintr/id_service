@@ -23,9 +23,11 @@ message MsgIDListRsp {
 
 message MsgIDGetReq {
   required string id_name = 1;
+  required int32 num = 2;
 }
 
 message MsgIDGetRsp {
   required uint64 id = 1;
+  required string reason = 2;
 }
 

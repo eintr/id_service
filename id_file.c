@@ -11,7 +11,6 @@
 #include <util_log.h>
 
 #include "id_file_format.h"
-#include "id_mem_format.h"
 
 static char *file_map;
 static off_t file_size;
@@ -246,23 +245,4 @@ void id_file_sync(void)
 {
 	msync(file_map, file_size, MS_ASYNC);
 }
-
-#ifdef TEST
-
-int main()
-{
-	int i;
-
-	mylog_set_target(LOGTARGET_STDERR);
-	if (id_file_load("/tmp/idf1")!=0) {
-		mylog(L_ERR, "id_file_load() failed.");
-		return -1;
-	}
-	for (i=0;i<id_array_size;++i) {
-		printf("ID%d:(id=%llu, name=%s)\n", i, id_array[i]->id, id_array[i]->name);
-	}
-	return 0;
-}
-
-#endif
 

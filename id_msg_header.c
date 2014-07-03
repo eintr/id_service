@@ -4,11 +4,11 @@
 #include <sys/epoll.h>
 #include <errno.h>
 
-#include "push_msg_header.h"
+#include "id_msg_header.h"
 
-int push_msg_recv_generic(conn_tcp_t *conn, struct push_msg_buf_st *b, int version, int command)
+int id_msg_recv_generic(conn_tcp_t *conn, struct id_msg_buf_st *b, int version, int command)
 {
-    struct push_msg_header_st *hdr;
+    struct id_msg_header_st *hdr;
     struct epoll_event ev;
     ssize_t len;
 
@@ -44,12 +44,12 @@ int push_msg_recv_generic(conn_tcp_t *conn, struct push_msg_buf_st *b, int versi
 		return RCV_ERROR;
 	} else {
 		b->len += len;
-		if (b->len<sizeof(struct push_msg_header_st)) {
+		if (b->len<sizeof(struct id_msg_header_st)) {
 			fprintf(stderr, "%s: msg header is not completed, again.\n", __FUNCTION__);
 			return RCV_CONTINUE;
 		}
 		hdr = (void*)(b->buf);
-		if (b->len < sizeof(struct push_msg_header_st)+ ntohl(hdr->body_length)) {
+		if (b->len < sizeof(struct id_msg_header_st)+ ntohl(hdr->body_length)) {
 			fprintf(stderr, "%s: msg body is not completed, again.\n", __FUNCTION__);
 			return RCV_CONTINUE;
 		}
@@ -58,18 +58,19 @@ int push_msg_recv_generic(conn_tcp_t *conn, struct push_msg_buf_st *b, int versi
 			fprintf(stderr, "%s: msg version==%d, Drop it!\n", __FUNCTION__, hdr->version);
 			return RCV_ERROR;
 		}
-		if (hdr->command != command) {
+		if (command>0 && hdr->command != command) {
 			fprintf(stderr, "%s: msg command==%d, which I don't know how to deal with. Drop it!\n", __FUNCTION__, hdr->command);
 			return RCV_ERROR;
 		}
-		b->pb_start = b->buf + sizeof(struct push_msg_header_st);
+		b->hdr = (void*)b->buf;
+		b->pb_start = b->buf + sizeof(struct id_msg_header_st);
 		b->pb_len = ntohl(hdr->body_length);
 		//fprintf(stderr, "%s: msg ok.\n", __FUNCTION__);
 		return RCV_OVER;
 	}
 }
 
-void push_msg_buf_free(struct push_msg_buf_st *b)
+void id_msg_buf_free(struct id_msg_buf_st *b)
 {
 	if (b) {
 		free(b->buf);
