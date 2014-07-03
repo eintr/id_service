@@ -12,3 +12,6 @@ prepare: push_msg_body.pb-c.c
 push_msg_body.pb-c.c: push_msg_body.proto
 	protoc-c --c_out=. $^
 
+test: ../../util_syscall.o ../../util_log.o id_file.c
+	gcc -DTEST $(CFLAGS) -o $@ $^ $(LDFALGS)
+
