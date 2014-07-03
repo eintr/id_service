@@ -1,0 +1,31 @@
+message MsgIDCreateReq {
+  required string id_name = 1;
+  required uint64 start = 2;
+}
+
+message MsgIDCreateRsp {
+  required bool success = 1;
+  optional string reason = 2;
+}
+
+message MsgIDListReq {
+  required string id_name = 1;
+}
+
+message MsgIDListEntry {
+  required string id_name = 1;
+  required uint64 current = 2;
+}
+
+message MsgIDListRsp {
+  repeated MsgIDListEntry list = 1;
+}
+
+message MsgIDGetReq {
+  required string id_name = 1;
+}
+
+message MsgIDGetRsp {
+  required uint64 id = 1;
+}
+
