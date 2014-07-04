@@ -46,6 +46,12 @@ static void *imp_new(imp_t *imp)
 static int imp_delete(imp_t *imp)
 {
 	struct mem_st *mem = imp->memory;
+	if (mem->rcvbuf) {
+		if (mem->rcvbuf->buf) {
+			free(mem->rcvbuf->buf);
+		}
+		free(mem->rcvbuf);
+	}
 	if (mem->sndbuf.buf) {
 		id_msg_buf_free(&mem->sndbuf);
 	}
@@ -53,6 +59,7 @@ static int imp_delete(imp_t *imp)
 		conn_tcp_close_nb(mem->conn);
 		mem->conn = NULL;
 	}
+	free(mem);
 }
 
 static enum enum_driver_retcode imp_driver_parse_msg(imp_t *imp)
