@@ -31,19 +31,24 @@ int id_create(const char *name, uint64_t start)
 		mylog(L_INFO, "id[%s] already exists.", name);
 		goto fail;
 	}
+	mylog(L_INFO, "id[%s] is new.", name);
 	newid = id_file_append(name, start);
 	if (newid==NULL) {
+		mylog(L_INFO, "id[%s] id_file_append() failed.", name);
 		goto fail;
 	}
+	mylog(L_INFO, "id[%s] is appended.", newid->name);
 	if (id_hash_add(newid)!=0) {
+		mylog(L_INFO, "id[%s] id_hash_add() failed.", newid->name);
 		goto fail;
 		// TODO: ROLL BACK!
 	}
+	mylog(L_INFO, "id[%s] is hashed.", newid->name);
 	id_file_spin_unlock();
 	return 0;
 fail:
 	id_file_spin_unlock();
-	return 0;
+	return -1;
 }
 
 int id_get(const char *name, uint64_t *dst, int64_t delta)
