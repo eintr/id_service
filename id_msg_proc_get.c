@@ -39,6 +39,7 @@ static void *imp_new(imp_t *imp)
 
 	mem->state = ST_PARSE_MSG;
 	mem->sndbuf.buf = NULL;
+	msg_idget_rsp__init(&mem->rsp);
 	return NULL;
 }
 
