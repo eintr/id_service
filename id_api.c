@@ -109,7 +109,8 @@ static enum enum_driver_retcode id_api_driver_demux_msg(imp_t *imp)
 
 	switch (mem->msgbuf->hdr->command) {
 		case CMD_REQ_ID_CREATE:
-			//msg_id_create_summon(mem->conn_api, mem->msgbuf);
+			fprintf(stderr, "%s: Got ID_CREATE msg.\n", __FUNCTION__);
+			msg_id_create_summon(mem->conn_api, mem->msgbuf);
 			mem->conn_api = NULL;
 			mem->msgbuf = NULL;
 			break;
@@ -119,6 +120,7 @@ static enum enum_driver_retcode id_api_driver_demux_msg(imp_t *imp)
 			mem->msgbuf = NULL;
 			break;
 		case CMD_REQ_ID_GET:
+			fprintf(stderr, "%s: Got ID_GET msg.\n", __FUNCTION__);
 			msg_id_get_summon(mem->conn_api, mem->msgbuf);
 			mem->conn_api = NULL;
 			mem->msgbuf = NULL;
