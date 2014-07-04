@@ -11,8 +11,8 @@
 #include <room_service.h>
 
 #include "mod_config.h"
-#include "id_file.h"
 #include "id_api.h"
+#include "id_pool.h"
 
 struct listener_memory_st {
 	listen_tcp_t	*listen;
@@ -95,13 +95,8 @@ static int mod_init(cJSON *conf)
 		return -1;
 	}
 
-	if (id_file_load(id_module_config.id_filename)!=0) {
-		mylog(L_ERR, "id_load_file() failed.");
-		return -1;
-	}
-
-	if (id_hash_init()) {
-		mylog(L_ERR, "id_hash_init() failed.");
+	if (id_pool_init(id_module_config.id_filename)!=0) {
+		mylog(L_ERR, "id_pool_init() failed.");
 		return -1;
 	}
 
