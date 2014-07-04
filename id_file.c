@@ -14,7 +14,10 @@
 
 static char *file_map;
 static off_t file_size;
+static int file_des;
+static off_t tail_pos;
 
+/** Used for hasht init ONLY, free'ed in id_hash_init() */
 struct id_entry_st **id_array=NULL;
 int id_array_size=0;
 
@@ -46,7 +49,7 @@ static int create_default_id_file(const char *fname)
 	memset(hdr, 0, hdr_size);
 	memcpy(&hdr->magic, "LEID", 4);
 	hdr->id0_offset = hdr_size;
-	hdr->sync_mark = 0;
+	hdr->clean_mark = 0;
 
 	id0_len=calc_reclen_align64(DEFAULT_ID_NAME);
 	id0 = alloca(id0_len);
@@ -96,6 +99,7 @@ static int count_ids_in_file(int fd)
 	lseek(fd, hdr.id0_offset, SEEK_SET);
 
 	while (1) {
+		tail_pos = lseek(fd, 0, SEEK_CUR);
 		ret = read(fd, &idbuf, sizeof(idbuf));
 		if (ret==0) {
 			mylog(L_ERR, "ID file unexpectly EOF!");
@@ -108,6 +112,7 @@ static int count_ids_in_file(int fd)
 		if (idbuf.rec_len==0) {
 			break;
 		}
+		lseek(fd, idbuf.rec_len-sizeof(idbuf), SEEK_CUR);
 		count++;
 	}
 
@@ -211,8 +216,27 @@ static int open_or_create(const char *fname)
 	}
 }
 
+void id_file_spin_lock(void)
+{
+	struct idfile_header_st *file_hdr;
+
+	file_hdr = (void*)file_map;
+
+	while (!__sync_bool_compare_and_swap(&file_hdr->clean_mark, FILE_CLEAN, FILE_DIRTY));
+}
+
+void id_file_spin_unlock(void)
+{
+	struct idfile_header_st *file_hdr;
+
+	file_hdr = (void*)file_map;
+
+	file_hdr->clean_mark = FILE_CLEAN;
+}
+
 static void id_file_unload(void)
 {
+	close(file_des);
 	msync(file_map, file_size, MS_SYNC);
 	munmap(file_map, file_size);
 }
@@ -236,9 +260,48 @@ int id_file_load(const char *fname)
 		close(fd);
 		return -2;
 	}
-	close(fd);
+	file_des = fd;
 	atexit(id_file_unload);
 	return 0;
+}
+
+struct id_entry_st *id_file_append(const char *name, uint64_t start)
+{
+	struct id_entry_st *newid;
+	char *tailid;
+	int tailid_len;
+	int newid_len;
+	off_t newid_pos, newtailid_pos;
+	void *p;
+
+	tailid_len = calc_reclen_align64("");
+	tailid = alloca(tailid_len);
+	memset(tailid, 0, tailid_len);
+
+	newid_len = calc_reclen_align64(name);
+	newid = alloca(newid_len);
+	newid->rec_len = newid_len;
+	newid->id = start;
+	strcpy(newid->name, name);
+	fprintf(stderr, "newid:{name=%s, start=%llu}\n", __FUNCTION__, newid->rec_len, newid->id);
+
+	newid_pos = lseek(file_des, tail_pos, SEEK_SET);
+	if (write(file_des, newid, newid_len)<0) {
+		goto fail;
+	}
+	newtailid_pos = lseek(file_des, 0, SEEK_CUR);
+	if (write(file_des, tailid, tailid_len)<0) {
+		goto fail;
+	}
+	p = mremap(file_map, file_size, file_size+newid_len, MREMAP_FIXED);
+	if (p==MAP_FAILED) {
+		goto fail;
+	}
+	file_size += newid_len;
+	tail_pos = newtailid_pos;
+	return (void*)(file_map + newid_pos);
+fail:
+	return NULL;
 }
 
 void id_file_sync(void)

@@ -11,10 +11,13 @@ struct id_entry_st {	// DON'T CHANGE THE ORDER OF MEMBERS! For keep the id align
 	uint8_t name[1];
 };
 
+#define	FILE_CLEAN	0x00000000UL
+#define	FILE_DIRTY	0x00000001UL
+
 struct idfile_header_st {
 	uint8_t magic[4];	// Always be "LEID" for Little-Endian machines, and "BEID" for Big-Endian machines.
 	uint32_t	id0_offset;
-	uint32_t	sync_mark;
+	uint32_t	clean_mark;
 };
 
 #endif
