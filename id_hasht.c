@@ -18,7 +18,13 @@ static void id_hash_destroy(void)
 int id_hash_init(void)
 {
 	int i;
-	int count;
+	int count=0;
+
+	struct id_entry_st **id_array=NULL;
+	int id_array_size=0;
+	struct idfile_header_st *hdr;
+	char *pos;
+	struct id_entry_st *curid;
 
 	idpool_hasht = hasht_new(NULL, 1000000);	// TODO: config this.
 	if (idpool_hasht==NULL) {
@@ -26,16 +32,18 @@ int id_hash_init(void)
 	}
 	atexit(id_hash_destroy);
 
-	count = 0;
-	for (i=0;i<id_array_size;++i) {
-		if (id_hash_add(id_array[i])==0) {
+    hdr = (void*)id_file_map_addr;
+    pos = id_file_map_addr + hdr->id0_offset;
+    curid = (void*)pos;
+    for (i=0;i<id_file_nr_ids;++i) {
+		if (id_hash_add(curid)==0) {
 			count++;
 		} else {
 			mylog(L_DEBUG, "Failed to hash id[%d]-%s", i, id_array[i]->name);
 		}
-	}
-	free(id_array);
-	id_array_size = 0;
+        pos += curid->rec_len;
+        curid = (void*)pos;
+    }
 	mylog(L_DEBUG, "Successfully hashed %d ids.", count);
 	return 0;
 }

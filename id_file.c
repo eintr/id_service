@@ -12,14 +12,12 @@
 
 #include "id_file_format.h"
 
-static char *file_map;
-static off_t file_size;
-static int file_des;
-static off_t tail_pos;
+char *id_file_map_addr;
+off_t id_file_map_size;
+int id_file_nr_ids;
 
-/** Used for hasht init ONLY, free'ed in id_hash_init() */
-struct id_entry_st **id_array=NULL;
-int id_array_size=0;
+static int file_des;
+static off_t idtail_pos;
 
 static int roundup_64(int n)
 {
@@ -42,6 +40,10 @@ static int create_default_id_file(const char *fname)
 	fd = open(fname, O_RDWR|O_CREAT, 0600);
 	if (fd<0) {
 		return -1;
+	}
+
+	if (ftruncate(fd, DEFAULT_INITFILESIZE)!=0) {
+		goto drop_fail;
 	}
 
 	hdr_size = roundup_64(sizeof(struct idfile_header_st));
@@ -84,78 +86,22 @@ drop_fail:
 	return -1;
 }
 
-static int count_ids_in_file(int fd)
-{
-	struct idfile_header_st hdr;
-	struct id_entry_st idbuf;
-	off_t savepos;
-	int count=0, ret;
-
-	savepos = lseek(fd, 0, SEEK_CUR);
-
-	lseek(fd, 0, SEEK_SET);
-	read(fd, &hdr, sizeof(hdr));
-
-	lseek(fd, hdr.id0_offset, SEEK_SET);
-
-	while (1) {
-		tail_pos = lseek(fd, 0, SEEK_CUR);
-		ret = read(fd, &idbuf, sizeof(idbuf));
-		if (ret==0) {
-			mylog(L_ERR, "ID file unexpectly EOF!");
-			break;
-		}
-		if (ret<sizeof(idbuf)) {
-			mylog(L_ERR, "ID file struct is bad!");
-			break;
-		}
-		if (idbuf.rec_len==0) {
-			break;
-		}
-		lseek(fd, idbuf.rec_len-sizeof(idbuf), SEEK_CUR);
-		count++;
-	}
-
-	lseek(fd, savepos, SEEK_SET);
-
-	return count;
-}
-
 static int map_id_file(int fd)
 {
-	struct idfile_header_st *hdr;
-	int i,count;
-	struct id_entry_st *curid;
-	char *pos;
-
-	count = count_ids_in_file(fd);
-	id_array = malloc(sizeof(void*)*count);
-
-	file_map = mmap(NULL, file_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	if (file_map==MAP_FAILED) {
+	id_file_map_addr = mmap(NULL, id_file_map_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	if (id_file_map_addr==MAP_FAILED) {
 		mylog(L_ERR, "mmap(): %m");
 		return -1;
 	}
-
-	hdr = (void*)file_map;
-
-	pos = file_map + hdr->id0_offset;
-	curid = (void*)pos;
-	for (i=0;i<count;++i) {
-		id_array[i] = curid;
-		id_array_size++;
-		pos += curid->rec_len;
-		curid = (void*)pos;
-	}
-
 	return 0;
 }
 
-static int check_id_filed(int fd)
+static int analysis_id_fd(int fd)
 {
 	off_t savepos;
 	struct stat stat_res;
 	struct idfile_header_st hdr;
+	struct id_entry_st idbuf;
 	int ret;
 
 	if (fstat(fd, &stat_res)) {
@@ -167,7 +113,7 @@ static int check_id_filed(int fd)
 		return -1;
 	}
 
-	file_size = stat_res.st_size;
+	id_file_map_size = stat_res.st_size;
 
 	savepos = lseek(fd, 0, SEEK_CUR);
 
@@ -188,11 +134,30 @@ static int check_id_filed(int fd)
 		return -1;
 	}
 
-	// TODO: Check also the file struct.
+	lseek(fd, hdr.id0_offset, SEEK_SET);
 
+	while (1) {
+		idtail_pos = lseek(fd, 0, SEEK_CUR);
+		ret = read(fd, &idbuf, sizeof(idbuf));
+		if (ret==0) {
+			mylog(L_ERR, "ID file unexpectly EOF!");
+			goto fail;
+		}
+		if (ret<sizeof(idbuf)) {
+			mylog(L_ERR, "ID file struct is bad!");
+			goto fail;
+		}
+		if (idbuf.rec_len==0) {
+			break;
+		}
+		lseek(fd, idbuf.rec_len-sizeof(idbuf), SEEK_CUR);
+		id_file_nr_ids++;
+	}
 	lseek(fd, savepos, SEEK_SET);
-
 	return 0;
+fail:
+	lseek(fd, savepos, SEEK_SET);
+	return -1;
 }
 
 
@@ -220,7 +185,7 @@ void id_file_spin_lock(void)
 {
 	struct idfile_header_st *file_hdr;
 
-	file_hdr = (void*)file_map;
+	file_hdr = (void*)id_file_map_addr;
 
 	while (!__sync_bool_compare_and_swap(&file_hdr->clean_mark, FILE_CLEAN, FILE_DIRTY));
 }
@@ -229,7 +194,7 @@ void id_file_spin_unlock(void)
 {
 	struct idfile_header_st *file_hdr;
 
-	file_hdr = (void*)file_map;
+	file_hdr = (void*)id_file_map_addr;
 
 	file_hdr->clean_mark = FILE_CLEAN;
 }
@@ -237,8 +202,8 @@ void id_file_spin_unlock(void)
 static void id_file_unload(void)
 {
 	close(file_des);
-	msync(file_map, file_size, MS_SYNC);
-	munmap(file_map, file_size);
+	msync(id_file_map_addr, id_file_map_size, MS_SYNC);
+	munmap(id_file_map_addr, id_file_map_size);
 }
 
 int id_file_load(const char *fname)
@@ -250,7 +215,7 @@ int id_file_load(const char *fname)
 		mylog(L_ERR, "open_or_create(%s) failed.", fname);
 		return -2;
 	}
-	if (check_id_filed(fd)!=0) {
+	if (analysis_id_fd(fd)!=0) {
 		mylog(L_ERR, "Check id file(%s) failed.", fname);
 		close(fd);
 		return -2;
@@ -280,32 +245,31 @@ struct id_entry_st *id_file_append(const char *name, uint64_t start)
 
 	newid_len = calc_reclen_align64(name);
 	newid = alloca(newid_len);
+	memset(newid, 0, newid_len);
 	newid->rec_len = newid_len;
 	newid->id = start;
 	strcpy(newid->name, name);
-	fprintf(stderr, "newid:{name=%s, start=%llu}\n", __FUNCTION__, newid->rec_len, newid->id);
+	fprintf(stderr, "%s: newid:{name=%s, start=%llu} prepared.\n", __FUNCTION__, newid->name, newid->id);
 
-	newid_pos = lseek(file_des, tail_pos, SEEK_SET);
+	newid_pos = lseek(file_des, idtail_pos, SEEK_SET);
 	if (write(file_des, newid, newid_len)<0) {
 		goto fail;
 	}
+	fprintf(stderr, "%s: newid appended.\n", __FUNCTION__);
 	newtailid_pos = lseek(file_des, 0, SEEK_CUR);
 	if (write(file_des, tailid, tailid_len)<0) {
 		goto fail;
 	}
-	p = mremap(file_map, file_size, file_size+newid_len, MREMAP_FIXED);
-	if (p==MAP_FAILED) {
-		goto fail;
-	}
-	file_size += newid_len;
-	tail_pos = newtailid_pos;
-	return (void*)(file_map + newid_pos);
+	id_file_map_size += newid_len;
+	idtail_pos = newtailid_pos;
+	fprintf(stderr, "%s: new id is at %d.\n", __FUNCTION__, newid_pos);
+	return (void*)(id_file_map_addr + newid_pos);
 fail:
 	return NULL;
 }
 
 void id_file_sync(void)
 {
-	msync(file_map, file_size, MS_ASYNC);
+	msync(id_file_map_addr, id_file_map_size, MS_ASYNC);
 }
 

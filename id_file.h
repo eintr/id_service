@@ -3,8 +3,9 @@
 
 #include "id_file_format.h"
 
-extern struct id_entry_st **id_array;
-extern int id_array_size;
+extern char *id_file_map_addr;
+extern off_t id_file_map_size;
+extern int id_file_nr_ids;
 
 int id_file_load(const char *fname);
 
