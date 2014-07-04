@@ -5,6 +5,9 @@
 
 #define	DEFAULT_ID_NAME	"Default"
 
+#define DEFAULT_INITFILESIZE    4096*8
+#define DEFAULT_EXPSTEP         4096*8
+
 struct id_entry_st {	// DON'T CHANGE THE ORDER OF MEMBERS! For keep the id aligned to 64bit border.
 	uint64_t id;
 	uint32_t rec_len;
