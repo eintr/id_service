@@ -18,7 +18,7 @@ void send_req(int sd)
 	MsgIDGetReq req = MSG_IDGET_REQ__INIT;
 	size_t len, buf_size, ret;
 
-	req.id_name = "Default";
+	req.id_name = idname;
 	req.num = 1;
 	len = msg_idget_req__get_packed_size(&req);
 	buf_size = sizeof(struct id_msg_header_st) + len;
