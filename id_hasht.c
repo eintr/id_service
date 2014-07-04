@@ -34,6 +34,8 @@ int id_hash_init(void)
 			mylog(L_DEBUG, "Failed to hash id[%d]-%s", i, id_array[i]->name);
 		}
 	}
+	free(id_array);
+	id_array_size = 0;
 	mylog(L_DEBUG, "Successfully hashed %d ids.", count);
 	return 0;
 }
@@ -63,17 +65,5 @@ int id_hash_add(struct id_entry_st *entry)
 	key.offset = offsetof(struct id_entry_st, name);
 	key.len = len;
 	return hasht_add_item(idpool_hasht, &key, entry);
-}
-
-int id_get(const char *name, uint64_t *dst, int64_t delta)
-{
-	struct id_entry_st *ptr;
-
-	ptr = id_hash_lookup(name);
-	if (ptr==NULL) {
-		return -1;
-	}
-	*dst = atomic_fetch_and_add64(&ptr->id, delta);
-	return 0;
 }
 
