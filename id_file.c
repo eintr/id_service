@@ -29,8 +29,7 @@ char *id_file_create(const char *idname, uint64_t start)
 {
     struct idfile_header_st *hdr;
     int hdr_size;
-    struct id_entry_st *id0, *idtail;
-    int id0_len, idtail_len, ret;
+    int ret;
     int fd;
     char fname_template[64], id_fname[64];
 
