@@ -8,6 +8,7 @@
 	This is a test module, it reflects every byte of the socket.
 */
 
+#include <conf.h>
 #include <room_service.h>
 
 #include "mod_config.h"
@@ -28,6 +29,7 @@ static int get_config(cJSON *conf)
 	struct addrinfo hint;
 	cJSON *value;
 	char *Host, Port[12];
+	char tmp_path[1024];
 
 	hint.ai_flags = 0;
 	hint.ai_family = AF_INET;
@@ -56,12 +58,17 @@ static int get_config(cJSON *conf)
 		return -1;
 	}
 
-	value = cJSON_GetObjectItem(conf, "ID_File");
-	if (value==NULL || value->type != cJSON_String) {
-		mylog(L_INFO, "Module configured an illegal or missing ID_File.");
+	value = cJSON_GetObjectItem(conf, "ID_Config_Dir");
+	if (value==NULL) {
+		strncpy(tmp_path, conf_get_working_dir(), 1024);
+		strncat(tmp_path, "/conf", 1024);
+		id_module_config.id_config_dir = strdup(tmp_path);
+		mylog(L_INFO, "ID_Config_Dir unconfigured, using default:%s.", id_module_config.id_config_dir);
+	} else if (value->type != cJSON_String) {
+		mylog(L_INFO, "Module configured an illegal or missing .");
 		return -1;
 	} else {
-		id_module_config.id_filename = value->valuestring;
+		id_module_config.id_config_dir = strdup(value->valuestring);
 	}
 
 	value = cJSON_GetObjectItem(conf, "Recv_API_TimeOut_ms");
@@ -95,7 +102,7 @@ static int mod_init(cJSON *conf)
 		return -1;
 	}
 
-	if (id_pool_init(id_module_config.id_filename)!=0) {
+	if (id_pool_init(id_module_config.id_config_dir)!=0) {
 		mylog(L_ERR, "id_pool_init() failed.");
 		return -1;
 	}
@@ -117,7 +124,11 @@ static int mod_init(cJSON *conf)
 
 static int mod_destroy(void)
 {
-	imp_kill(id_listener);
+	free(id_module_config.id_config_dir);
+	id_module_config.id_config_dir = NULL;
+	if (id_listener) {
+		imp_kill(id_listener);
+	}
 	return 0;
 }
 

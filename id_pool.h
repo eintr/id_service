@@ -1,7 +1,7 @@
 #ifndef ID_POOL_H
 #define ID_POOL_H
 
-int id_pool_init(const char *filename);
+int id_pool_init(const char *id_config_path);
 
 int id_create(const char *name, uint64_t start);
 

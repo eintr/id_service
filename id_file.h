@@ -3,18 +3,17 @@
 
 #include "id_file_format.h"
 
-extern char *id_file_map_addr;
-extern off_t id_file_map_size;
-extern int id_file_nr_ids;
+struct mapped_id_file_st {
+	void *map_addr;
+	struct idfile_header_st *hdr;
+	off_t map_size;
+};
 
-int id_file_load(const char *fname);
+int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr);
 
-struct id_entry_st *id_file_append(const char *name, uint64_t start);
+char *id_file_create(const char *idname, uint64_t start);
 
-void id_file_sync(void);
-
-void id_file_spin_lock(void);
-void id_file_spin_unlock(void);
+int id_file_map(struct mapped_id_file_st *res, const char *fname);
 
 #endif
 

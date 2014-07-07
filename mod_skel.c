@@ -16,6 +16,8 @@
 struct id_module_config_st id_module_config = {		// Set default values.
 	.snd_api_timeout_ms = 1000,
 	.rcv_api_timeout_ms = 1000,
+
+	.id_config_dir = "/",
 };
 
 static int test_config(cJSON *conf)
