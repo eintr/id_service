@@ -163,7 +163,7 @@ int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr)
 {
 	int fd;
 	glob_t glob_res;
-	int ret;
+	int ret, count;
 	char pat[1024];
 	int i, pos;
 
@@ -183,9 +183,19 @@ int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr)
 		return -1;
 	}
 
-	*arr = malloc(sizeof(struct mapped_id_file_st)*glob_res.gl_pathc);
+	if (*arr==NULL) {
+		*arr = malloc(sizeof(struct mapped_id_file_st)*glob_res.gl_pathc);
+		count = glob_res.gl_pathc;
+	} else {
+		if (*nr < glob_res.gl_pathc) {
+			mylog(L_ERR, "%s: array is too small, use %d results only.", __FUNCTION__, *nr);
+			count = *nr;
+		} else {
+			count = glob_res.gl_pathc;
+		}
+	}
 	pos = 0;
-	for (i=0; i<glob_res.gl_pathc; ++i) {
+	for (i=0; i<count; ++i) {
 		if (id_file_map((*arr)+pos, glob_res.gl_pathv[i])==0) {
 			mylog(L_DEBUG, "id_file: %s was mapped.", glob_res.gl_pathv[i]);
 			pos++;

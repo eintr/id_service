@@ -1,7 +1,7 @@
 
 MOD_NAME=id_service
 
-sources=mod_skel.c id_msg_body.pb-c.c id_msg_header.c id_hasht.c id_api.c id_file.c id_api_listener.c id_msg_proc_get.c id_msg_proc_create.c id_pool.c
+sources=mod_skel.c id_msg_body.pb-c.c id_msg_header.c id_hasht.c id_api.c id_file.c id_api_listener.c id_msg_proc_get.c id_msg_proc_create.c id_msg_proc_list.c id_pool.c
 
 CFLAGS+=-D_GNU_SOURCE
 
