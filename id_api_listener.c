@@ -71,6 +71,20 @@ static int get_config(cJSON *conf)
 		id_module_config.id_config_dir = strdup(value->valuestring);
 	}
 
+	value = cJSON_GetObjectItem(conf, "Restart_Forward_mil");
+	if (value==NULL) {
+		id_module_config.restart_forward_millesimal = 1;
+		mylog(L_INFO, "Restart_Forward_mil unconfigured, using default value:%s.", id_module_config.restart_forward_millesimal);
+	} else if (value->type != cJSON_Number) {
+		mylog(L_INFO, "Module configured an invalid type Restart_Forward_mil.");
+		return -1;
+	} else if (value->valueint<0 || value->valueint>1000) {
+		id_module_config.restart_forward_millesimal = 1;
+		mylog(L_INFO, "Module configured Restart_Forward_mil is weired, using default value %d.", id_module_config.restart_forward_millesimal);
+	} else {
+		id_module_config.restart_forward_millesimal = value->valueint;
+	}
+
 	value = cJSON_GetObjectItem(conf, "Recv_TimeOut_ms");
 	if (value==NULL) {
 		// Use default value.

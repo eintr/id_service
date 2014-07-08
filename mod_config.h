@@ -8,6 +8,8 @@ extern struct id_module_config_st {
 	int	snd_api_timeout_ms;
 	int	rcv_api_timeout_ms;
 
+	int restart_forward_millesimal;
+
 	char *id_config_dir;
 } id_module_config;
 

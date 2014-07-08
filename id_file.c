@@ -166,6 +166,7 @@ int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr)
 	int ret, count;
 	char pat[1024];
 	int i, pos;
+	uint64_t skip;
 
 	snprintf(pat, 1024, "%s/%s", id_module_config.id_config_dir, CONFIG_FILE_PATTERN);
 
@@ -197,7 +198,9 @@ int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr)
 	pos = 0;
 	for (i=0; i<count; ++i) {
 		if (id_file_map((*arr)+pos, glob_res.gl_pathv[i])==0) {
-			mylog(L_DEBUG, "id_file: %s was mapped.", glob_res.gl_pathv[i]);
+			skip = (*arr)[pos].hdr->value * id_module_config.restart_forward_millesimal / 1000 + 1;
+			(*arr)[pos].hdr->value += skip;
+			mylog(L_DEBUG, "id_file: %s was mapped, %d ids skipped.", glob_res.gl_pathv[i], skip);
 			pos++;
 		} else {
 			mylog(L_INFO, "id_file: %s mapping failed.", glob_res.gl_pathv[i]);
