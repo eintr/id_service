@@ -75,7 +75,7 @@ static enum enum_driver_retcode imp_driver_parse_msg(imp_t *imp)
 		mem->state = ST_Ex;
 		return TO_RUN;
 	}
-	mylog(L_INFO, "imp[%d]: %s: msg_idcreate_req__unpack() OK, {id_name=%s, start=%llu}.", imp->id, __FUNCTION__, mem->req->id_name, mem->req->start);
+	mylog(L_DEBUG, "imp[%d]: %s: msg_idcreate_req__unpack() OK, {id_name=%s, start=%llu}.", imp->id, __FUNCTION__, mem->req->id_name, mem->req->start);
 	return imp_driver_do_create(imp);
 }
 
@@ -137,7 +137,7 @@ static enum enum_driver_retcode imp_driver_send_rsp(imp_t *imp)
 	ret = conn_tcp_send_nb(mem->conn, mem->sndbuf.buf + mem->sndbuf.pos, mem->sndbuf.len);
 	if (ret<=0) {
 		if (errno==EAGAIN) {
-			mylog(L_INFO, "ST_SEND_RSP[+%ds] sleep->", delta_t());
+			mylog(L_DEBUG, "ST_SEND_RSP[+%ds] sleep->", delta_t());
 			imp_set_ioev(imp, mem->conn->sd, EPOLLOUT|EPOLLRDHUP);
 			imp_set_timer(imp, id_module_config.snd_api_timeout_ms);
 			return TO_WAIT_IO;
@@ -150,11 +150,11 @@ static enum enum_driver_retcode imp_driver_send_rsp(imp_t *imp)
 		mem->sndbuf.pos += ret;
 		mem->sndbuf.len -= ret;
 		if (mem->sndbuf.len <= 0) {
-			mylog(L_INFO, "ST_SEND_RSP[+%ds] %d bytes sent, OK->", delta_t(), ret);
+			mylog(L_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, OK->", delta_t(), ret);
 			mem->state = ST_TERM;
 			return TO_RUN;
 		}
-		mylog(L_INFO, "ST_SEND_RSP[+%ds] %d bytes sent, again->", delta_t(), ret);
+		mylog(L_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, again->", delta_t(), ret);
 		return TO_RUN;
 	}
 }
@@ -163,7 +163,7 @@ static enum enum_driver_retcode imp_driver_ex(imp_t *imp)
 {
 	struct mem_st *mem = imp->memory;
 
-	mylog(L_INFO, "ST_Ex[+%ds] Exception occured.", delta_t());
+	mylog(L_DEBUG, "ST_Ex[+%ds] Exception occured.", delta_t());
 	mem->state = ST_TERM;
 	return TO_RUN;
 }

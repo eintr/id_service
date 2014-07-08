@@ -138,11 +138,11 @@ static enum enum_driver_retcode imp_driver_send_rsp(imp_t *imp)
 		mem->sndbuf.pos += ret;
 		mem->sndbuf.len -= ret;
 		if (mem->sndbuf.len <= 0) {
-			mylog(L_INFO, "ST_SEND_RSP[+%ds] %d bytes sent, OK->", delta_t(), ret);
+			mylog(L_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, OK->", delta_t(), ret);
 			mem->state = ST_TERM;
 			return TO_RUN;
 		}
-		mylog(L_INFO, "ST_SEND_RSP[+%ds] %d bytes sent, again->", delta_t(), ret);
+		mylog(L_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, again->", delta_t(), ret);
 		return TO_RUN;
 	}
 }
@@ -151,7 +151,7 @@ static enum enum_driver_retcode imp_driver_ex(imp_t *imp)
 {
 	struct mem_st *mem = imp->memory;
 
-	mylog(L_INFO, "ST_Ex[+%ds] Exception occured.", delta_t());
+	mylog(L_DEBUG, "ST_Ex[+%ds] Exception occured.", delta_t());
 	mem->state = ST_TERM;
 	return TO_RUN;
 }
