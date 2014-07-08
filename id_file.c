@@ -33,7 +33,7 @@ char *id_file_create(const char *idname, uint64_t start)
     int fd;
     char fname_template[64], id_fname[64];
 
-	fprintf(stderr, "Try to create id file for %s\n", idname);
+	//fprintf(stderr, "Try to create id file for %s\n", idname);
     do {
     	snprintf(fname_template, 64, "%s/.%s.id_XXXXXX", id_module_config.id_config_dir, idname);
         mktemp(fname_template);
@@ -46,9 +46,9 @@ char *id_file_create(const char *idname, uint64_t start)
             return NULL;
         }
     } while(fd<0);
-	fprintf(stderr, "id file %s created\n", fname_template);
+	//fprintf(stderr, "id file %s created\n", fname_template);
     hdr_size = calc_filesize_align64(idname);
-	fprintf(stderr, "%s size will be %d\n", fname_template, hdr_size);
+	//fprintf(stderr, "%s size will be %d\n", fname_template, hdr_size);
     hdr = alloca(hdr_size);
     memset(hdr, 0, hdr_size);
     memcpy(&hdr->magic, NATIVE_ENDIAN_MAGIC, 4);
@@ -60,7 +60,7 @@ char *id_file_create(const char *idname, uint64_t start)
         goto drop_fail;
     }
     lseek(fd, 0, SEEK_SET);
-	fprintf(stderr, "%s was written.\n", fname_template);
+	//fprintf(stderr, "%s was written.\n", fname_template);
 
     snprintf(id_fname, 64, "%s/%s.id", id_module_config.id_config_dir, idname);
     if (link(fname_template, id_fname)<0) {
@@ -68,7 +68,7 @@ char *id_file_create(const char *idname, uint64_t start)
     }
 	close(fd);
     unlink(fname_template);
-	fprintf(stderr, "%s was renamed to %s.\n", fname_template, id_fname);
+	//fprintf(stderr, "%s was renamed to %s.\n", fname_template, id_fname);
     return strdup(id_fname);
 
 drop_fail:

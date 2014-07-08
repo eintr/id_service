@@ -71,7 +71,7 @@ static int get_config(cJSON *conf)
 		id_module_config.id_config_dir = strdup(value->valuestring);
 	}
 
-	value = cJSON_GetObjectItem(conf, "Recv_API_TimeOut_ms");
+	value = cJSON_GetObjectItem(conf, "Recv_TimeOut_ms");
 	if (value==NULL) {
 		// Use default value.
 	} else if (value->type != cJSON_Number) {
@@ -81,7 +81,7 @@ static int get_config(cJSON *conf)
 		id_module_config.rcv_api_timeout_ms = value->valueint;
 	}
 
-	value = cJSON_GetObjectItem(conf, "Send_API_TimeOut_ms");
+	value = cJSON_GetObjectItem(conf, "Send_TimeOut_ms");
 	if (value==NULL) {
 		// Use default value.
 	} else if (value->type != cJSON_Number) {
