@@ -74,7 +74,7 @@ static int get_config(cJSON *conf)
 	value = cJSON_GetObjectItem(conf, "Restart_Forward_mil");
 	if (value==NULL) {
 		id_module_config.restart_forward_millesimal = 1;
-		mylog(L_INFO, "Restart_Forward_mil unconfigured, using default value:%s.", id_module_config.restart_forward_millesimal);
+		mylog(L_INFO, "Restart_Forward_mil unconfigured, using default value:%d.", id_module_config.restart_forward_millesimal);
 	} else if (value->type != cJSON_Number) {
 		mylog(L_INFO, "Module configured an invalid type Restart_Forward_mil.");
 		return -1;
