@@ -29,7 +29,7 @@ void send_req(int sd)
 	msg_idget_req__pack(&req, sndbuf->body);
 
 	ret = send(sd, sndbuf, buf_size, 0);
-	printf("send() => %zd(%zd=%jd+%zd)\n", ret, buf_size, (intmax_t)sizeof(struct id_msg_header_st), len);
+	//fprintf(stderr, "send() => %zd(%zd=%jd+%zd)\n", ret, buf_size, (intmax_t)sizeof(struct id_msg_header_st), len);
 }
 
 void recv_show_rsp(int sd)
@@ -68,7 +68,8 @@ void recv_show_rsp(int sd)
 			fprintf(stderr, "msg_idget_rsp__unpack() failed.\n");
 			return;
 		}
-		printf("{id=%llu}\n", rsp->id);
+		//printf("{id=%llu}\n", rsp->id);
+		printf("%llu\n", rsp->id);
 		msg_idget_rsp__free_unpacked(rsp, NULL);
 	}
 }
@@ -100,14 +101,14 @@ main(int argc, char **argv)
 		return 0;
 	}
 
-	printf("Connected.\n");
+	fprintf(stderr, "Connected.\n");
 
 	send_req(sd);
 
 	recv_show_rsp(sd);
 
 	close(sd);
-	printf("Disconnected.\n");
+	fprintf(stderr, "Disconnected.\n");
 
 	exit (0);
 }
