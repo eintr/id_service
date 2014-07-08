@@ -4,6 +4,8 @@
 #include <sys/epoll.h>
 #include <errno.h>
 
+#include <util_log.h>
+
 #include "id_msg_header.h"
 
 #define	BUF_SIZE_INIT	1024
