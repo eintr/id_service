@@ -8,10 +8,8 @@
 
 #ifdef __ORDER_LITTLE_ENDIAN__
 #define NATIVE_ENDIAN_MAGIC	"LEID"
-#define FORIEN_ENDIAN_MAGIC	"BEID"
 #else
 #define NATIVE_ENDIAN_MAGIC	"BEID"
-#define FORIEN_ENDIAN_MAGIC	"LEID"
 #endif
 
 struct idfile_header_st {
