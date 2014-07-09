@@ -67,7 +67,7 @@ int id_msg_recv_generic(conn_tcp_t *conn, struct id_msg_buf_st *b, int version, 
 			//fprintf(stderr, "%s: msg body is not completed, again.\n", __FUNCTION__);
 			return RCV_CONTINUE;
 		}
-		fprintf(stderr, "%s: msg recv completed.\n", __FUNCTION__);
+		//fprintf(stderr, "%s: msg recv completed.\n", __FUNCTION__);
 		if (hdr->version != version) {
 			//fprintf(stderr, "%s: msg version==%d, Drop it!\n", __FUNCTION__, hdr->version);
 			return RCV_ERROR;
