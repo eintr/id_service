@@ -34,19 +34,16 @@ enum {
 	ST_TERM
 };
 
-static void *imp_new(imp_t *imp)
+static void *imp_new(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
-
 	mem->state = ST_PARSE_MSG;
 	mem->sndbuf.buf = NULL;
 	msg_idcreate_rsp__init(&mem->rsp);
 	return NULL;
 }
 
-static int imp_delete(imp_t *imp)
+static int imp_delete(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
 	if (mem->rcvbuf) {
 		if (mem->rcvbuf->buf) {
 			free(mem->rcvbuf->buf);
@@ -63,28 +60,24 @@ static int imp_delete(imp_t *imp)
 	free(mem);
 }
 
-static enum enum_driver_retcode imp_driver_do_create(imp_t *imp);
+static enum enum_driver_retcode imp_driver_do_create(struct mem_st *mem);
 
-static enum enum_driver_retcode imp_driver_parse_msg(imp_t *imp)
+static enum enum_driver_retcode imp_driver_parse_msg(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
-
 	mem->req = msg_idcreate_req__unpack(NULL, mem->rcvbuf->pb_len, mem->rcvbuf->pb_start);
 	if (mem->req==NULL) {
-		mylog(L_INFO, "imp[%d]: %s: msg_idcreate_req__unpack() failed.", imp->id, __FUNCTION__);
+		mylog(L_INFO, "imp[%d]: %s: msg_idcreate_req__unpack() failed.", IMP_ID, __FUNCTION__);
 		mem->state = ST_Ex;
 		return TO_RUN;
 	}
-	mylog(L_DEBUG, "imp[%d]: %s: msg_idcreate_req__unpack() OK, {id_name=%s, start=%llu}.", imp->id, __FUNCTION__, mem->req->id_name, mem->req->start);
-	return imp_driver_do_create(imp);
+	mylog(L_DEBUG, "imp[%d]: %s: msg_idcreate_req__unpack() OK, {id_name=%s, start=%llu}.", IMP_ID, __FUNCTION__, mem->req->id_name, mem->req->start);
+	return imp_driver_do_create(mem);
 }
 
-static enum enum_driver_retcode imp_driver_do_create(imp_t *imp)
+static enum enum_driver_retcode imp_driver_do_create(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
-
 	if (id_create(mem->req->id_name, mem->req->start)!=0) {
-		mylog(L_INFO, "imp[%d]: %s: id_create() failed.", imp->id, __FUNCTION__);
+		mylog(L_INFO, "imp[%d]: %s: id_create() failed.", IMP_ID, __FUNCTION__);
 		mem->rsp.success = 0;
 		mem->rsp.reason = "Failed";
 	} else {
@@ -95,9 +88,8 @@ static enum enum_driver_retcode imp_driver_do_create(imp_t *imp)
 	return TO_RUN;
 }
 
-static enum enum_driver_retcode imp_driver_prepare_rsp(imp_t *imp)
+static enum enum_driver_retcode imp_driver_prepare_rsp(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
 	int ret;
 	int pb_len;
 
@@ -124,13 +116,12 @@ static enum enum_driver_retcode imp_driver_prepare_rsp(imp_t *imp)
 	return TO_RUN;
 }
 
-static enum enum_driver_retcode imp_driver_send_rsp(imp_t *imp)
+static enum enum_driver_retcode imp_driver_send_rsp(struct mem_st *mem)
 {
 	int ret;
-	struct mem_st *mem = imp->memory;
 
-	if (imp->event_mask & EV_MASK_TIMEOUT  || imp->event_mask & EV_MASK_IOERR) {
-		mylog(L_INFO, "imp[%d]: ST_SEND_RSP timed out or error.", imp->id);
+	if (IMP_TIMEDOUT || IMP_IOERR) {
+		mylog(L_INFO, "imp[%d]: ST_SEND_RSP timed out or error.", IMP_ID);
 		mem->state = ST_Ex;
 		return TO_RUN;
 	}
@@ -138,8 +129,8 @@ static enum enum_driver_retcode imp_driver_send_rsp(imp_t *imp)
 	if (ret<=0) {
 		if (errno==EAGAIN) {
 			mylog(L_DEBUG, "ST_SEND_RSP[+%ds] sleep->", delta_t());
-			imp_set_ioev(imp, mem->conn->sd, EPOLLOUT|EPOLLRDHUP);
-			imp_set_timer(imp, id_module_config.snd_api_timeout_ms);
+			imp_set_ioev(mem->conn->sd, EPOLLOUT|EPOLLRDHUP);
+			imp_set_timer(id_module_config.snd_api_timeout_ms);
 			return TO_WAIT_IO;
 		} else {
 			mylog(L_INFO, "ST_SEND_RSP[+%ds] error: %m->", delta_t());
@@ -159,31 +150,27 @@ static enum enum_driver_retcode imp_driver_send_rsp(imp_t *imp)
 	}
 }
 
-static enum enum_driver_retcode imp_driver_ex(imp_t *imp)
+static enum enum_driver_retcode imp_driver_ex(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
-
 	mylog(L_DEBUG, "ST_Ex[+%ds] Exception occured.", delta_t());
 	mem->state = ST_TERM;
 	return TO_RUN;
 }
 
-static enum enum_driver_retcode driver(imp_t *imp)
+static enum enum_driver_retcode driver(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
-
 	switch (mem->state) {
 		case ST_PARSE_MSG:
-			return imp_driver_parse_msg(imp);
+			return imp_driver_parse_msg(mem);
 			break;
 		case ST_PREPARE_RSP:
-			return imp_driver_prepare_rsp(imp);
+			return imp_driver_prepare_rsp(mem);
 			break;
 		case ST_SEND_RSP:
-			return imp_driver_send_rsp(imp);
+			return imp_driver_send_rsp(mem);
 			break;
 		case ST_Ex:
-			return imp_driver_ex(imp);
+			return imp_driver_ex(mem);
 			break;
 		case ST_TERM:
 			return TO_TERM;
@@ -193,9 +180,9 @@ static enum enum_driver_retcode driver(imp_t *imp)
 	}
 }
 
-static void *imp_serialize(imp_t *imp)
+static void *imp_serialize(struct mem_st *mem)
 {
-	struct mem_st *mem = imp->memory;
+	return NULL;
 }
 
 static imp_soul_t soul = {

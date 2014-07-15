@@ -45,10 +45,10 @@ void recv_show_rsp(int sd)
 		perror("recv()");
 		return;
 	} else if (len==0) {
-		printf("EOF\n");
+		fprintf(stderr, "EOF\n");
 		return;
 	} else if (len<sizeof(hdr)) {
-		printf("Fragment!\n");
+		fprintf(stderr, "Fragment!\n");
 		return;
 	} else {
 		if (hdr.command != CMD_RSP_ID_GET) {
@@ -62,7 +62,7 @@ void recv_show_rsp(int sd)
 		}
 		pbbuf = alloca(4096);
 		len = recv(sd, pbbuf, pblen, 0);
-		printf("recv() => %zu/%zu\n", len, pblen);
+		fprintf(stderr, "recv() => %zu/%zu\n", len, pblen);
 		rsp = msg_idget_rsp__unpack(NULL, pblen, pbbuf);
 		if (rsp==NULL) {
 			fprintf(stderr, "msg_idget_rsp__unpack() failed.\n");

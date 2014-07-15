@@ -155,28 +155,23 @@ static cJSON *mod_serialize(void)
 	return NULL;
 }
 
-static void *listener_new(imp_t *p)
+static void *listener_new(struct listener_memory_st *lmem)
 {
-	struct listener_memory_st *lmem=p->memory;
-
-	if (imp_set_ioev(p, lmem->listen->sd, EPOLLIN|EPOLLRDHUP)<0) {
-		mylog(L_ERR, "Set listen socket epoll event FAILED: %m\n");
-	}
+	//if (imp_set_ioev(lmem->listen->sd, EPOLLIN|EPOLLRDHUP)<0) {
+	//	mylog(L_ERR, "Set listen socket epoll event FAILED: %m\n");
+	//}
 
 	return NULL;
 }
 
-static int listener_delete(imp_t *p)
+static int listener_delete(struct listener_memory_st *mem)
 {
-	struct listener_memory_st *mem=p->memory;
-
 	free(mem);
 	return 0;
 }
 
-static enum enum_driver_retcode listener_driver(imp_t *p)
+static enum enum_driver_retcode listener_driver(struct listener_memory_st *lmem)
 {
-	struct listener_memory_st *lmem=p->memory;
 	struct server_memory_st *emem;
 	conn_tcp_t *conn;
 	imp_t *server;
@@ -193,13 +188,12 @@ static enum enum_driver_retcode listener_driver(imp_t *p)
 		}
 	}
 
+	imp_set_ioev(lmem->listen->sd, EPOLLIN|EPOLLRDHUP);
 	return TO_WAIT_IO;
 }
 
-static void *listener_serialize(imp_t *imp)
+static void *listener_serialize(struct listener_memory_st *m)
 {
-	struct listener_memory_st *m=imp->memory;
-
 	return NULL;
 }
 

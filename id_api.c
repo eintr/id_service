@@ -35,20 +35,16 @@ enum state_en {
 	ST_TERM
 };
 
-static void *id_api_new(imp_t *imp)
+static void *id_api_new(struct id_api_memory_st *m)
 {
-	struct id_api_memory_st *m=imp->memory;
-
 	m->state = ST_RCV_MSG;
 	m->msgbuf = malloc(sizeof(struct id_msg_buf_st));
 	m->msgbuf->buf = NULL;
 	return NULL;
 }
 
-static int id_api_delete(imp_t *imp)
+static int id_api_delete(struct id_api_memory_st *memory)
 {
-	struct id_api_memory_st *memory = imp->memory;
-
 	if (memory->conn_api) {
 		conn_tcp_close_nb(memory->conn_api);
 	}
@@ -60,18 +56,16 @@ static int id_api_delete(imp_t *imp)
 		memory->msgbuf = NULL;
 	}
 	free(memory);
-	imp->memory = NULL;
 	return 0;
 }
 
-static enum enum_driver_retcode id_api_driver_rcv_msg(imp_t *imp)
+static enum enum_driver_retcode id_api_driver_rcv_msg(struct id_api_memory_st *mem)
 {
-	struct id_api_memory_st *mem = imp->memory;
     struct id_msg_header_st *hdr;
     ssize_t len;
     int ret;
 
-	if (imp->event_mask & EV_MASK_TIMEOUT) {
+	if (current_imp_->event_mask & EV_MASK_TIMEOUT) {
 		//fprintf(stderr, "%s: Recive CMD_REQ_PUSH timed out.\n", __FUNCTION__);
 		mem->state = ST_Ex;
 		return TO_RUN;
@@ -84,8 +78,8 @@ static enum enum_driver_retcode id_api_driver_rcv_msg(imp_t *imp)
             return TO_RUN;
             break;
         case RCV_WAIT:
-            imp_set_ioev(imp, mem->conn_api->sd, EPOLLIN|EPOLLRDHUP);
-			imp_set_timer(imp, id_module_config.rcv_api_timeout_ms);
+            imp_set_ioev(mem->conn_api->sd, EPOLLIN|EPOLLRDHUP);
+			imp_set_timer(id_module_config.rcv_api_timeout_ms);
             return TO_WAIT_IO;
             break;
         case RCV_CONTINUE:
@@ -103,10 +97,8 @@ static enum enum_driver_retcode id_api_driver_rcv_msg(imp_t *imp)
     return TO_RUN;
 }
 
-static enum enum_driver_retcode id_api_driver_demux_msg(imp_t *imp)
+static enum enum_driver_retcode id_api_driver_demux_msg(struct id_api_memory_st *mem)
 {
-	struct id_api_memory_st *mem = imp->memory;
-
 	switch (mem->msgbuf->hdr->command) {
 		case CMD_REQ_ID_CREATE:
 			//fprintf(stderr, "%s: Got ID_CREATE msg.\n", __FUNCTION__);
@@ -134,31 +126,24 @@ static enum enum_driver_retcode id_api_driver_demux_msg(imp_t *imp)
 	return TO_RUN;
 }
 
-static enum enum_driver_retcode id_api_driver_ex(imp_t *imp)
+static enum enum_driver_retcode id_api_driver_ex(struct id_api_memory_st *mem)
 {
-	struct id_api_memory_st *mem = imp->memory;
-
-	mylog(L_INFO, "imp[%d]: Exception occured.", imp->id);
+	mylog(L_INFO, "imp[%d]: Exception occured.", current_imp_->id);
 	mem->state = ST_TERM;
 	return TO_RUN;
 }
 
-static enum enum_driver_retcode id_api_driver(imp_t *imp)
+static enum enum_driver_retcode id_api_driver(struct id_api_memory_st *mem)
 {
-	struct id_api_memory_st *mem = imp->memory;
-	struct epoll_event ev;
-	ssize_t ret;
-
-	mem = imp->memory;
 	switch (mem->state) {
 		case ST_RCV_MSG:
-			return id_api_driver_rcv_msg(imp);
+			return id_api_driver_rcv_msg(mem);
 			break;
 		case ST_DEMUX_MSG:
-			return id_api_driver_demux_msg(imp);
+			return id_api_driver_demux_msg(mem);
 			break;
 		case ST_Ex:
-			return id_api_driver_ex(imp);
+			return id_api_driver_ex(mem);
 			break;
 		case ST_TERM:
 			return TO_TERM;
@@ -169,7 +154,7 @@ static enum enum_driver_retcode id_api_driver(imp_t *imp)
 	return TO_RUN;
 }
 
-static void *id_api_serialize(imp_t *unused)
+static void *id_api_serialize(struct id_api_memory_st *mem)
 {
 	//fprintf(stderr, "%s is running.\n", __FUNCTION__);
 	return NULL;
