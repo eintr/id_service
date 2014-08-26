@@ -5,7 +5,8 @@ sources=mod_skel.c id_msg_body.pb-c.c id_msg_header.c id_hasht.c id_api.c id_fil
 
 CFLAGS+=-D_GNU_SOURCE
 
-LDFLAGS+=`pkg-config --libs 'libprotobuf-c >= 1.0.0'`
+#LDFLAGS+=`pkg-config --libs 'libprotobuf-c >= 1.0.0'`
+LDFLAGS+=-lprotobuf-c
 
 include ../module.inc
 

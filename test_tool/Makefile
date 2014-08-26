@@ -1,6 +1,6 @@
 CFLAGS+=-I.. -I../../..
 
-LDFLAGS+=`pkg-config --libs 'libprotobuf-c >= 1.0.0'`
+LDFLAGS+=`pkg-config --libs 'libprotobuf-c >= 1.0.0'` -lprotobuf-c
 
 %: %.o
 	$(CC) -o $@ $^ ../id_msg_body.pb-c.o  $(LDFLAGS)
