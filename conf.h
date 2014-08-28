@@ -16,16 +16,15 @@
 #define APPVERSION					"1.0"
 
 #define DEFAULT_DAEMON				1
-#define DEFAULT_WORKERS				0
 #define	DEFAULT_CONCURRENT_MAX		20000
 #define DEFAULT_MONITOR_PORT		19990
 #define DEFAULT_DEBUG_VALUE 		1
 #define	DEFAULT_WORK_DIR			INSTALL_PREFIX
 #define DEFAULT_CONFPATH			CONFDIR"/"APPNAME".conf"
-#define DEFAULT_MODPATH				MODDIR
+#define DEFAULT_IDCONFIG_PATH		DEFAULT_CONFPATH
 
 #define PORT_MIN 1025
-#define PORT_MAX 65535
+#define PORT_MAX 65534
 
 #define BACKLOG_NUM 500
 
@@ -61,10 +60,8 @@ int conf_get_monitor_port();
 int conf_get_concurrent_max();
 int conf_get_log_level();
 int conf_get_daemon();
-int conf_get_workers(int);
 char *conf_get_working_dir(void);
-char *conf_get_module_dir(void);
-cJSON *conf_get_modules_desc(void);
+char *conf_get_id_config_dir(void);
 
 #endif
 

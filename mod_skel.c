@@ -20,24 +20,8 @@ struct id_module_config_st id_module_config = {		// Set default values.
 	.id_config_dir = "/",
 };
 
-static int test_config(cJSON *conf)
-{
-    cJSON *value;
-
-    value = cJSON_GetObjectItem(conf, "Enabled");
-    if (value->type != cJSON_True) {
-        mylog(L_INFO, "Module is configured disabled.");
-        return -1;
-    }
-	return 0;
-}
-
-
 static int mod_init(cJSON *conf)
 {
-	if (test_config(conf)<0) {
-		return -1;
-	}
 	api_interface.mod_initializer(conf);
 	return 0;
 }

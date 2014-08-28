@@ -8,13 +8,11 @@
 #define SYSLOG_NAMES 1
 #include "util_log.h"
 
-#include "util_syscall.h"
+//#include "util_syscall.h"
 #include "conf.h"
 
 static FILE *flog_fp;
 static FILE *clog_fp;
-//static int slog_facility;
-//static int slog_ident;
 
 static int log_target_set = 0;
 static int log_targets_count = 0;

@@ -28,8 +28,7 @@ static cJSON *conf_create_default_config(void)
 	cJSON_AddNumberToObject(conf, "MonitorPort", DEFAULT_MONITOR_PORT);
 	cJSON_AddNumberToObject(conf, "ConcurrentMax", DEFAULT_CONCURRENT_MAX);
 	cJSON_AddStringToObject(conf, "WorkingDir", INSTALL_PREFIX);
-	cJSON_AddStringToObject(conf, "ModuleDir", DEFAULT_MODPATH);
-	cJSON_AddStringToObject(conf, "Workers", DEFAULT_WORKERS);
+	cJSON_AddStringToObject(conf, "IDConfigDir", DEFAULT_IDCONFIG_PATH);
 
 	return conf;
 }
@@ -198,10 +197,10 @@ char *conf_get_working_dir(void)
 	return DEFAULT_WORK_DIR;
 }
 
-char *conf_get_module_dir(void)
+char *conf_get_id_config_dir(void)
 {
 	cJSON *tmp;
-	tmp = cJSON_GetObjectItem(global_conf, "ModuleDir");
+	tmp = cJSON_GetObjectItem(global_conf, "IDConfigDir");
 	if (tmp) {
 		if (tmp->type!=cJSON_String) {
 			return NULL;
@@ -211,39 +210,14 @@ char *conf_get_module_dir(void)
 	return "./";
 }
 
-cJSON *conf_get_modules_desc(void)
-{
-	cJSON *tmp;
-	tmp = cJSON_GetObjectItem(global_conf, "Modules");
-	if (tmp) {
-		if (tmp->type!=cJSON_Array) {
-			return NULL;
-		}
-	}
-	return tmp;
-}
-
-
 static int conf_check_legal(cJSON *conf)
 {
-	int LogLevel, ConcurrentMax;
-	char *ModuleDir;
+	int LogLevel;
+	char *id_dir;
 	cJSON *Modules;
 
 	LogLevel = conf_get_log_level_internal(conf);
 	if (LogLevel < 0)
-		return -1;
-
-	ConcurrentMax = conf_get_concurrent_max_internal(conf);
-	if (ConcurrentMax < 0) 
-		return -1;
-
-	ModuleDir = conf_get_module_dir_internal(conf);
-	if (ModuleDir==NULL)
-		return -1;
-
-	Modules = conf_get_modules_desc_internal(conf);
-	if (Modules==NULL)
 		return -1;
 
 	return 0;
