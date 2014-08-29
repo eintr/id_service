@@ -8,7 +8,7 @@ sources=main.c conf.c id_service.c ds_hasht.c id_msg_body.pb-c.c id_msg_header.c
 
 objects=$(sources:.c=.o)
 
-CFLAGS+=-D_GNU_SOURCE -pthread
+CFLAGS+=-D_GNU_SOURCE -pthread -g -O0
 
 #LDFLAGS+=`pkg-config --libs 'libprotobuf-c >= 1.0.0'`
 LDFLAGS+=-lprotobuf-c -pthread -lm
