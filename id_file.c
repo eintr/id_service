@@ -8,8 +8,9 @@
 #include <unistd.h>
 #include <alloca.h>
 #include <glob.h>
+#include <string.h>
 
-#include <util_log.h>
+#include <syslog.h>
 
 #include "mod_config.h"
 #include "id_file_format.h"
@@ -35,14 +36,14 @@ char *id_file_create(const char *idname, uint64_t start)
 
 	//fprintf(stderr, "Try to create id file for %s\n", idname);
     do {
-    	snprintf(fname_template, 64, "%s/.%s.id_XXXXXX", id_module_config.id_config_dir, idname);
+    	snprintf(fname_template, 64, "%s/.%s.id_XXXXXX", conf_get_id_config_dir(), idname);
         mktemp(fname_template);
         fd = open(fname_template, O_RDWR|O_CREAT|O_EXCL, 0600);
         if (fd<0) {
             if (errno==EEXIST) {
                 continue;
             }
-			mylog(L_DEBUG, "open(%s) failed: %m", fname_template);
+			syslog(LOG_DEBUG, "open(%s) failed: %m", fname_template);
             return NULL;
         }
     } while(fd<0);
@@ -62,7 +63,7 @@ char *id_file_create(const char *idname, uint64_t start)
     lseek(fd, 0, SEEK_SET);
 	//fprintf(stderr, "%s was written.\n", fname_template);
 
-    snprintf(id_fname, 64, "%s/%s.id", id_module_config.id_config_dir, idname);
+    snprintf(id_fname, 64, "%s/%s.id", conf_get_id_config_dir(), idname);
     if (link(fname_template, id_fname)<0) {
         goto drop_fail;
     }
@@ -86,11 +87,11 @@ static int analysis_id_fd(int fd)
 	int ret;
 
 	if (fstat(fd, &stat_res)) {
-		mylog(L_ERR, "fstat() failed: %m");
+		syslog(LOG_ERR, "fstat() failed: %m");
 		return -1;
 	}
 	if (!S_ISREG(stat_res.st_mode)) {
-		mylog(L_ERR, "id file is not a regular file.");
+		syslog(LOG_ERR, "id file is not a regular file.");
 		return -1;
 	}
 
@@ -99,17 +100,17 @@ static int analysis_id_fd(int fd)
 	lseek(fd, 0, SEEK_SET);
 	ret = read(fd, &hdr, sizeof(hdr));
 	if (ret<sizeof(hdr)) {
-		mylog(L_ERR, "id file seems too small.");
+		syslog(LOG_ERR, "id file seems too small.");
 		goto fail;
 	}
 
 	if (memcmp(&hdr.magic, NATIVE_ENDIAN_MAGIC, 4)!=0) {
-		mylog(L_ERR, "Can't understand this id file.");
+		syslog(LOG_ERR, "Can't understand this id file.");
 		goto fail;
 	}
 
 	if (hdr.clean_mark != FILE_CLEAN) {
-		mylog(L_ERR, "Id file seems not clean.");
+		syslog(LOG_ERR, "Id file seems not clean.");
 		goto fail;
 	}
 	lseek(fd, savepos, SEEK_SET);
@@ -135,22 +136,22 @@ int id_file_map(struct mapped_id_file_st *res, const char *fname)
 	struct stat stat_res;
 
 	if (lstat(fname, &stat_res)) {
-		mylog(L_ERR, "fstat() failed: %m");
+		syslog(LOG_ERR, "fstat() failed: %m");
 		return -1;
 	}
 	fd = open(fname, O_RDWR);
 	if (fd<0) {
-		mylog(L_INFO, "open(%s) failed: %m.", fname);
+		syslog(LOG_INFO, "open(%s) failed: %m.", fname);
 		return -1;
 	}
 	if (analysis_id_fd(fd)!=0) {
-		mylog(L_ERR, "Check id file(%s) failed.", fname);
+		syslog(LOG_ERR, "Check id file(%s) failed.", fname);
 		close(fd);
 		return -1;
 	}
 	res->map_addr = mmap(NULL, stat_res.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 	if (res->map_addr==MAP_FAILED) {
-		mylog(L_ERR, "Map id file(%s) failed.", fname);
+		syslog(LOG_ERR, "Map id file(%s) failed.", fname);
 		close(fd);
 		return -1;
 	}
@@ -168,19 +169,19 @@ int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr)
 	int i, pos;
 	uint64_t skip;
 
-	snprintf(pat, 1024, "%s/%s", id_module_config.id_config_dir, CONFIG_FILE_PATTERN);
+	snprintf(pat, 1024, "%s/%s", conf_get_id_config_dir(), CONFIG_FILE_PATTERN);
 
 	ret = glob(pat, 0, NULL, &glob_res);
 	if (ret==GLOB_NOMATCH) {
-		mylog(L_INFO, "glob(%s) failed: No id_files found.", pat);
+		syslog(LOG_INFO, "glob(%s) failed: No id_files found.", pat);
 		*arr = NULL;
 		*nr = 0;
 		return 0;
 	} else if (ret==GLOB_ABORTED) {
-		mylog(L_ERR, "glob(%s) failed: I/O error.", pat);
+		syslog(LOG_ERR, "glob(%s) failed: I/O error.", pat);
 		return -1;
 	} else if (ret==GLOB_NOSPACE) {
-		mylog(L_ERR, "glob(%s) failed: Out of mempry.", pat);
+		syslog(LOG_ERR, "glob(%s) failed: Out of mempry.", pat);
 		return -1;
 	}
 
@@ -189,7 +190,7 @@ int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr)
 		count = glob_res.gl_pathc;
 	} else {
 		if (*nr < glob_res.gl_pathc) {
-			mylog(L_ERR, "%s: array is too small, use %d results only.", __FUNCTION__, *nr);
+			syslog(LOG_ERR, "%s: array is too small, use %d results only.", __FUNCTION__, *nr);
 			count = *nr;
 		} else {
 			count = glob_res.gl_pathc;
@@ -198,16 +199,16 @@ int id_files_load(const char *path, struct mapped_id_file_st **arr, int *nr)
 	pos = 0;
 	for (i=0; i<count; ++i) {
 		if (id_file_map((*arr)+pos, glob_res.gl_pathv[i])==0) {
-			skip = (*arr)[pos].hdr->value * id_module_config.restart_forward_millesimal / 1000 + 1;
+			skip = (*arr)[pos].hdr->value * conf_get_restart_forward() / 1000 + 1;
 			(*arr)[pos].hdr->value += skip;
-			mylog(L_DEBUG, "id_file: %s was mapped, %d ids skipped.", glob_res.gl_pathv[i], skip);
+			syslog(LOG_DEBUG, "id_file: %s was mapped, %llu ids skipped.", glob_res.gl_pathv[i], skip);
 			pos++;
 		} else {
-			mylog(L_INFO, "id_file: %s mapping failed.", glob_res.gl_pathv[i]);
+			syslog(LOG_INFO, "id_file: %s mapping failed.", glob_res.gl_pathv[i]);
 		}
 	}
 	*nr = pos;
-	mylog(L_INFO, "%d id_files loaded.", pos);
+	syslog(LOG_INFO, "%d id_files loaded.", pos);
 	globfree(&glob_res);
 	return 0;
 }

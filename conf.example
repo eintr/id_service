@@ -1,0 +1,13 @@
+{
+	"LogLevel"			:	7,
+	"Daemon"			:	false,
+	"ConcurrentMax"	:	2000,
+
+	"LocalAddr"		:	"0.0.0.0",
+	"LocalPort"		:	19990,
+	"IDConfigDir"	:	"conf/id_files",
+	"RestartForward_mil"	:	5,
+	"Recv_TimeOut_ms"	:	1000,
+	"Send_TimeOut_ms"	:	1000
+}
+

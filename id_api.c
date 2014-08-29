@@ -2,13 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <syslog.h>
 /** \endcond */
 
 /** \file id_api.c
 	This is a test module, it reflects every byte of the socket.
 */
 
-#include <room_service.h>
+//#include <room_service.h>
 #include "mod_config.h"
 #include "id_msg_header.h"
 #include "id_msg_body.pb-c.h"
@@ -18,14 +19,12 @@
 #define	LOGSIZE	1024
 
 struct id_api_memory_st {
-	conn_tcp_t	*conn_api;
+	int sd;
 	int state;
 	struct id_msg_buf_st *msgbuf;
 
 	char logbuf[LOGSIZE];
 };
-
-static imp_soul_t id_api_soul;
 
 enum state_en {
 	ST_RCV_MSG=1,
@@ -45,8 +44,9 @@ static void *id_api_new(struct id_api_memory_st *m)
 
 static int id_api_delete(struct id_api_memory_st *memory)
 {
-	if (memory->conn_api) {
-		conn_tcp_close_nb(memory->conn_api);
+	if (memory->sd>=0) {
+		close(memory->sd);
+		memory->sd = -1;
 	}
 	if (memory->msgbuf) {
 		if (memory->msgbuf->buf) {
@@ -59,81 +59,61 @@ static int id_api_delete(struct id_api_memory_st *memory)
 	return 0;
 }
 
-static enum enum_driver_retcode id_api_driver_rcv_msg(struct id_api_memory_st *mem)
+static int id_api_driver_rcv_msg(struct id_api_memory_st *mem)
 {
     struct id_msg_header_st *hdr;
     ssize_t len;
     int ret;
 
-	if (current_imp_->event_mask & EV_MASK_TIMEOUT) {
-		//fprintf(stderr, "%s: Recive CMD_REQ_PUSH timed out.\n", __FUNCTION__);
-		mem->state = ST_Ex;
-		return TO_RUN;
-	}
-	ret = id_msg_recv_generic(mem->conn_api, mem->msgbuf, 1, -1);
+	ret = id_msg_recv_generic(mem->sd, mem->msgbuf, 1, -1);
 	switch (ret) {
-		case RCV_OVER:
+		case 0:
 			//fprintf(stderr, "%s: Got msg.\n", __FUNCTION__);
             mem->state = ST_DEMUX_MSG;
-            return TO_RUN;
+            return 0;
             break;
-        case RCV_WAIT:
-            imp_set_ioev(mem->conn_api->sd, EPOLLIN|EPOLLRDHUP);
-			imp_set_timer(id_module_config.rcv_api_timeout_ms);
-            return TO_WAIT_IO;
-            break;
-        case RCV_CONTINUE:
-            return TO_RUN;
-            break;
-        case RCV_ERROR:
+        case -1:
             mem->state = ST_Ex;
-            return TO_RUN;
+            return -1;
             break;
         default:
             //fprintf(stderr, "%s: This must be a bug! Core dump!\n", __FUNCTION__);
             abort();
             break;
     }
-    return TO_RUN;
 }
 
-static enum enum_driver_retcode id_api_driver_demux_msg(struct id_api_memory_st *mem)
+static int id_api_driver_demux_msg(struct id_api_memory_st *mem)
 {
 	switch (mem->msgbuf->hdr->command) {
 		case CMD_REQ_ID_CREATE:
 			//fprintf(stderr, "%s: Got ID_CREATE msg.\n", __FUNCTION__);
-			msg_id_create_summon(mem->conn_api, mem->msgbuf);
-			mem->conn_api = NULL;
-			mem->msgbuf = NULL;
+			msg_id_create_enter(mem->sd, mem->msgbuf);
 			break;
 		case CMD_REQ_ID_LIST:
-			msg_id_list_summon(mem->conn_api, mem->msgbuf);
-			mem->conn_api = NULL;
-			mem->msgbuf = NULL;
+			msg_id_list_enter(mem->sd, mem->msgbuf);
 			break;
 		case CMD_REQ_ID_GET:
 			//fprintf(stderr, "%s: Got ID_GET msg.\n", __FUNCTION__);
-			msg_id_get_summon(mem->conn_api, mem->msgbuf);
-			mem->conn_api = NULL;
-			mem->msgbuf = NULL;
+			msg_id_get_enter(mem->sd, mem->msgbuf);
 			break;
 		default:
-			mylog(L_INFO, "%s: msg command==%d, which I don't know how to deal with. Drop it!\n", __FUNCTION__, mem->msgbuf->hdr->command);
+			syslog(LOG_INFO, "%s: msg command==%d, which I don't know how to deal with. Drop it!\n", __FUNCTION__, mem->msgbuf->hdr->command);
 			break;
 	}
 
 	mem->state = ST_TERM;
-	return TO_RUN;
+	return 0;
 }
 
-static enum enum_driver_retcode id_api_driver_ex(struct id_api_memory_st *mem)
+static int id_api_driver_ex(struct id_api_memory_st *mem)
 {
-	mylog(L_INFO, "imp[%d]: Exception occured.", current_imp_->id);
+	syslog(LOG_INFO, "Conn: Exception occured.");
 	mem->state = ST_TERM;
-	return TO_RUN;
+	return 0;
 }
 
-static enum enum_driver_retcode id_api_driver(struct id_api_memory_st *mem)
+static int id_api_driver(struct id_api_memory_st *mem)
 {
 	switch (mem->state) {
 		case ST_RCV_MSG:
@@ -146,12 +126,12 @@ static enum enum_driver_retcode id_api_driver(struct id_api_memory_st *mem)
 			return id_api_driver_ex(mem);
 			break;
 		case ST_TERM:
-			return TO_TERM;
+			return 0;
 			break;
 		default:
 			break;
 	}
-	return TO_RUN;
+	return 0;
 }
 
 static void *id_api_serialize(struct id_api_memory_st *mem)
@@ -160,26 +140,17 @@ static void *id_api_serialize(struct id_api_memory_st *mem)
 	return NULL;
 }
 
-imp_t *id_api_summon(conn_tcp_t *conn)
+int id_api_enter(int client_sd)
 {
-	imp_t *server;
 	struct id_api_memory_st *mem;
 
 	mem = calloc(sizeof(*mem), 1);
-	mem->conn_api = conn;
-	server = imp_summon(mem, &id_api_soul);
-	if (server==NULL) {
-		mylog(L_ERR, "Failed to summon a new push_service.");
-		free(mem);
-		return NULL;
+	mem->sd = client_sd;
+	id_api_new(mem);
+	while (mem->state != ST_TERM) {
+		id_api_driver(mem);
 	}
-	return server;
+	id_api_delete(mem);
+	return 0;
 }
-
-static imp_soul_t id_api_soul = {
-	.fsm_new = id_api_new,
-	.fsm_delete = id_api_delete,
-	.fsm_driver = id_api_driver,
-	.fsm_serialize = id_api_serialize,
-};
 

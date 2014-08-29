@@ -21,7 +21,7 @@ int log_base_level_=L_INFO;
 
 __thread char log_buffer_[LOG_BUFFER_SIZE];
 
-int mylog_set_target(enum log_target_en code, ...)
+int syslog_set_target(enum log_target_en code, ...)
 {
 	va_list va;
 	FILE *fp;
@@ -77,7 +77,7 @@ int mylog_set_target(enum log_target_en code, ...)
 	return -1;
 }
 
-int mylog_clear_target(enum log_target_en code)
+int syslog_clear_target(enum log_target_en code)
 {
 	if (code & LOGTARGET_FILE) {
 		if (log_target_set & LOGTARGET_FILE) {
@@ -112,7 +112,7 @@ int mylog_clear_target(enum log_target_en code)
 	return -1;
 }
 
-int mylog_least_level(int loglevel)
+int syslog_least_level(int loglevel)
 {
 	if (loglevel<L_MINVALUE || loglevel>L_MAXVALUE) {
 		return -EINVAL;
@@ -121,7 +121,7 @@ int mylog_least_level(int loglevel)
 	return 0;
 }
 
-void do_mylog(int loglevel, const char *fmt, ...)
+void do_syslog(int loglevel, const char *fmt, ...)
 {
 	va_list va, va1;
 
@@ -164,12 +164,12 @@ void do_mylog(int loglevel, const char *fmt, ...)
 	va_end(va);
 }
 
-void mylog_reset(void)
+void syslog_reset(void)
 {
-	mylog_clear_target(LOGTARGET_FILE);
-	mylog_clear_target(LOGTARGET_SYSLOG);
-	mylog_clear_target(LOGTARGET_CONSOLE);
-	mylog_clear_target(LOGTARGET_STDERR);
+	syslog_clear_target(LOGTARGET_FILE);
+	syslog_clear_target(LOGTARGET_SYSLOG);
+	syslog_clear_target(LOGTARGET_CONSOLE);
+	syslog_clear_target(LOGTARGET_STDERR);
 }
 
 int get_log_value(const char *str)

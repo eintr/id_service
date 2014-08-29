@@ -25,10 +25,14 @@ static cJSON *conf_create_default_config(void)
 	} else {
 		cJSON_AddItemToObject(conf, "Debug", cJSON_CreateFalse());
 	}
+	cJSON_AddItemToObject(conf, "Daemon", cJSON_CreateFalse());
 	cJSON_AddNumberToObject(conf, "MonitorPort", DEFAULT_MONITOR_PORT);
 	cJSON_AddNumberToObject(conf, "ConcurrentMax", DEFAULT_CONCURRENT_MAX);
 	cJSON_AddStringToObject(conf, "WorkingDir", INSTALL_PREFIX);
 	cJSON_AddStringToObject(conf, "IDConfigDir", DEFAULT_IDCONFIG_PATH);
+	cJSON_AddNumberToObject(conf, "RestartForward_mil", DEFAULT_FORWARD_mil);
+	cJSON_AddNumberToObject(conf, "Recv_TimeOut_ms", 1000);
+	cJSON_AddNumberToObject(conf, "Send_TimeOut_ms", 1000);
 
 	return conf;
 }
@@ -118,9 +122,6 @@ int conf_get_concurrent_max(void)
 	cJSON *tmp;
 	tmp = cJSON_GetObjectItem(global_conf, "ConcurrentMax");
 	if (tmp) {
-		if (tmp->type!=cJSON_Number) {
-			return -1;
-		}
 		return tmp->valueint;
 	}
 	return DEFAULT_CONCURRENT_MAX;
@@ -131,15 +132,12 @@ int conf_get_log_level(void)
 	cJSON *tmp;
 	tmp = cJSON_GetObjectItem(global_conf, "LogLevel");
 	if (tmp) {
-		if (tmp->type!=cJSON_Number) {
-			return -1;
-		}
 		return tmp->valueint;
 	}
 	return 6;
 }
 
-int conf_get_daemon_internal(void)
+int conf_get_daemon(void)
 {
 	cJSON *tmp;
 	tmp = cJSON_GetObjectItem(global_conf, "Daemon");
@@ -153,45 +151,11 @@ int conf_get_daemon_internal(void)
 	return DEFAULT_DAEMON;
 }
 
-int conf_get_workers(int n)
-{
-	cJSON *tmp;
-	tmp = cJSON_GetObjectItem(global_conf, "Workers");
-	if (tmp) {
-		if (tmp->type == cJSON_Number) {
-			if (tmp->valueint==0) {
-				return n;
-			} else {
-				return tmp->valueint;
-			}
-		} else {
-			return n;
-		}
-	}
-	return n;
-}
-
-int conf_get_monitor_port(void)
-{
-	cJSON *tmp;
-	tmp = cJSON_GetObjectItem(global_conf, "MonitorPort");
-	if (tmp) {
-		if (tmp->type!=cJSON_Number) {
-			return -1;
-		}
-		return tmp->valueint;
-	}
-	return DEFAULT_MONITOR_PORT;
-}
-
 char *conf_get_working_dir(void)
 {
 	cJSON *tmp;
 	tmp = cJSON_GetObjectItem(global_conf, "WorkingDir");
 	if (tmp) {
-		if (tmp->type!=cJSON_String) {
-			return NULL;
-		}
 		return tmp->valuestring;
 	}
 	return DEFAULT_WORK_DIR;
@@ -202,12 +166,59 @@ char *conf_get_id_config_dir(void)
 	cJSON *tmp;
 	tmp = cJSON_GetObjectItem(global_conf, "IDConfigDir");
 	if (tmp) {
-		if (tmp->type!=cJSON_String) {
-			return NULL;
-		}
 		return tmp->valuestring;
 	}
-	return "./";
+	return DEFAULT_IDCONFIG_PATH;
+}
+
+char *conf_get_local_addr(void)
+{
+	cJSON *tmp;
+	tmp = cJSON_GetObjectItem(global_conf, "LocalAddr");
+	if (tmp) {
+		return tmp->valuestring;
+	}
+	return "0.0.0.0";
+}
+
+int conf_get_local_port(void)
+{
+	cJSON *tmp;
+	tmp = cJSON_GetObjectItem(global_conf, "LocalPort");
+	if (tmp) {
+		return tmp->valueint;
+	}
+	return 19999;
+}
+
+int conf_get_restart_forward(void)
+{
+	cJSON *tmp;
+	tmp = cJSON_GetObjectItem(global_conf, "RestartForward_mil");
+	if (tmp) {
+		return tmp->valueint;
+	}
+	return 5;
+}
+
+int conf_get_r_timeout(void)
+{
+	cJSON *tmp;
+	tmp = cJSON_GetObjectItem(global_conf, "Recv_TimeOut_ms");
+	if (tmp) {
+		return tmp->valueint;
+	}
+	return 5;
+}
+
+int conf_get_s_timeout(void)
+{
+	cJSON *tmp;
+	tmp = cJSON_GetObjectItem(global_conf, "Send_TimeOut_ms");
+	if (tmp) {
+		return tmp->valueint;
+	}
+	return 5;
 }
 
 static int conf_check_legal(cJSON *conf)
@@ -216,7 +227,7 @@ static int conf_check_legal(cJSON *conf)
 	char *id_dir;
 	cJSON *Modules;
 
-	LogLevel = conf_get_log_level_internal(conf);
+	LogLevel = conf_get_log_level();
 	if (LogLevel < 0)
 		return -1;
 

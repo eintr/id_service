@@ -22,6 +22,7 @@
 #define	DEFAULT_WORK_DIR			INSTALL_PREFIX
 #define DEFAULT_CONFPATH			CONFDIR"/"APPNAME".conf"
 #define DEFAULT_IDCONFIG_PATH		DEFAULT_CONFPATH
+#define DEFAULT_FORWARD_mil			5
 
 #define PORT_MIN 1025
 #define PORT_MAX 65534
@@ -56,12 +57,18 @@ int conf_reload(const char *filename);
 */
 int conf_load_json(cJSON *conf);
 
-int conf_get_monitor_port();
+//int conf_get_monitor_port();
 int conf_get_concurrent_max();
 int conf_get_log_level();
 int conf_get_daemon();
 char *conf_get_working_dir(void);
 char *conf_get_id_config_dir(void);
+
+char *conf_get_local_addr(void);
+int conf_get_local_port(void);
+int conf_get_restart_forward(void);
+int conf_get_r_timeout(void);
+int conf_get_s_timeout(void);
 
 #endif
 

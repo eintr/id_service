@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <syslog.h>
 
-#include <room_service.h>
-#include <util_misc.h>
-#include <util_atomic.h>
+#include "util_atomic.h"
 
 #include "mod_config.h"
 #include "id_msg_body.pb-c.h"
@@ -15,7 +14,7 @@
 
 struct mem_st {
 	int state;
-	conn_tcp_t *conn;
+	int sd;
 	struct id_msg_buf_st *rcvbuf;
 
 	MsgIDGetReq *req;
@@ -52,26 +51,26 @@ static int imp_delete(struct mem_st *mem)
 	if (mem->sndbuf.buf) {
 		id_msg_buf_free(&mem->sndbuf);
 	}
-	if (mem->conn) {
-		conn_tcp_close_nb(mem->conn);
-		mem->conn = NULL;
+	if (mem->sd>=0) {
+		close(mem->sd);
+		mem->sd = -1;
 	}
 	free(mem);
 }
 
-static enum enum_driver_retcode imp_driver_parse_msg(struct mem_st *mem)
+static int imp_driver_parse_msg(struct mem_st *mem)
 {
 	mem->req = msg_idget_req__unpack(NULL, mem->rcvbuf->pb_len, mem->rcvbuf->pb_start);
 	if (mem->req==NULL) {
-		mylog(L_INFO, "imp[%d]: %s: msg_idget_req__unpack() failed.", current_imp_->id, __FUNCTION__);
+		syslog(LOG_INFO, "Conn: %s: msg_idget_req__unpack() failed.", __FUNCTION__);
 		mem->state = ST_Ex;
-		return TO_RUN;
+		return 0;
 	}
 	mem->state = ST_PREPARE_RSP;
-	return TO_RUN;
+	return 0;
 }
 
-static enum enum_driver_retcode imp_driver_prepare_rsp(struct mem_st *mem)
+static int imp_driver_prepare_rsp(struct mem_st *mem)
 {
 	int ret;
 	int pb_len;
@@ -88,7 +87,7 @@ static enum enum_driver_retcode imp_driver_prepare_rsp(struct mem_st *mem)
 	mem->sndbuf.buf = malloc(mem->sndbuf.buf_size);
 	if (mem->sndbuf.buf==NULL) {
 		mem->state = ST_Ex;
-		return TO_RUN;
+		return 0;
 	}
 	mem->sndbuf.hdr = (void*)mem->sndbuf.buf;
 	mem->sndbuf.hdr->version = 1;
@@ -103,51 +102,44 @@ static enum enum_driver_retcode imp_driver_prepare_rsp(struct mem_st *mem)
 	mem->req = NULL;
 
 	mem->state = ST_SEND_RSP;
-	return TO_RUN;
+	return 0;
 }
 
-static enum enum_driver_retcode imp_driver_send_rsp(struct mem_st *mem)
+static int imp_driver_send_rsp(struct mem_st *mem)
 {
 	int ret;
 
-	if (IMP_TIMEDOUT || IMP_IOERR) {
-		mylog(L_INFO, "imp[%d]: ST_SEND_RSP timed out or error.", IMP_ID);
-		mem->state = ST_Ex;
-		return TO_RUN;
-	}
-	ret = conn_tcp_send_nb(mem->conn, mem->sndbuf.buf + mem->sndbuf.pos, mem->sndbuf.len);
+send_data:
+	ret = send(mem->sd, mem->sndbuf.buf + mem->sndbuf.pos, mem->sndbuf.len, 0);
 	if (ret<=0) {
-		if (errno==EAGAIN) {
-			mylog(L_INFO, "ST_SEND_RSP[+%ds] sleep->", delta_t());
-			imp_set_ioev(mem->conn->sd, EPOLLOUT|EPOLLRDHUP);
-			imp_set_timer(id_module_config.snd_api_timeout_ms);
-			return TO_WAIT_IO;
+		if (errno==EINTR) {
+			goto send_data;
 		} else {
-			mylog(L_INFO, "ST_SEND_RSP[+%ds] error: %m->", delta_t());
+			syslog(LOG_INFO, "ST_SEND_RSP[+%ds] error: %m->", delta_t());
 			mem->state = ST_Ex;
-			return TO_RUN;
+			return 0;
 		}
 	} else {
 		mem->sndbuf.pos += ret;
 		mem->sndbuf.len -= ret;
 		if (mem->sndbuf.len <= 0) {
-			//mylog(L_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, OK->", delta_t(), ret);
+			//syslog(LOG_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, OK->", delta_t(), ret);
 			mem->state = ST_TERM;
-			return TO_RUN;
+			return 0;
 		}
-		mylog(L_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, again->", delta_t(), ret);
-		return TO_RUN;
+		syslog(LOG_DEBUG, "ST_SEND_RSP[+%ds] %d bytes sent, again->", delta_t(), ret);
+		return 0;
 	}
 }
 
-static enum enum_driver_retcode imp_driver_ex(struct mem_st *mem)
+static int imp_driver_ex(struct mem_st *mem)
 {
-	mylog(L_DEBUG, "ST_Ex[+%ds] Exception occured.", delta_t());
+	syslog(LOG_DEBUG, "ST_Ex[+%ds] Exception occured.", delta_t());
 	mem->state = ST_TERM;
-	return TO_RUN;
+	return 0;
 }
 
-static enum enum_driver_retcode driver(struct mem_st *mem)
+static int imp_driver(struct mem_st *mem)
 {
 	switch (mem->state) {
 		case ST_PARSE_MSG:
@@ -163,7 +155,7 @@ static enum enum_driver_retcode driver(struct mem_st *mem)
 			return imp_driver_ex(mem);
 			break;
 		case ST_TERM:
-			return TO_TERM;
+			return 0;
 			break;
 		default:
 			break;
@@ -175,25 +167,21 @@ static void *imp_serialize(struct mem_st *mem)
 	return NULL;
 }
 
-static imp_soul_t soul = {
-	.fsm_new = imp_new,
-	.fsm_delete = imp_delete,
-	.fsm_driver = driver,
-	.fsm_serialize = imp_serialize,
-};
-
-imp_t *msg_id_get_summon(conn_tcp_t *conn, struct id_msg_buf_st *buf)
+int msg_id_get_enter(int sd, struct id_msg_buf_st *buf)
 {
 	struct mem_st *mem;
 
 	mem = malloc(sizeof(struct mem_st));
 	if (mem==NULL) {
-		return NULL;
+		return -1;
 	}
-
-	mem->conn = conn;
+	mem->sd = sd;
 	mem->rcvbuf = buf;
-
-	return imp_summon(mem, &soul);
+	imp_new(mem);
+	while (mem->state!=ST_TERM) {
+		imp_driver(mem);
+	}
+	imp_delete(mem);
+	return 0;
 }
 

@@ -10,9 +10,9 @@
 #include <signal.h>
 #include <errno.h>
 #include <sys/resource.h>
+#include <syslog.h>
 /** \endcond */
 
-#include "util_log.h"
 #include "conf.h"
 
 static int terminate=0;
@@ -23,14 +23,13 @@ static char *conf_path;
 static void daemon_exit(int s)
 {
 	if (s>0) {
-		mylog(L_INFO, "Signal %d caught, exit now.", s); 
+		syslog(LOG_INFO, "Signal %d caught, exit now.", s); 
 	} else {
-		mylog(L_INFO, "Synchronized exit."); 
+		syslog(LOG_INFO, "Synchronized exit."); 
 	}
 	//TODO: do exit
-	dungeon_delete();
-	server_state_destroy();
 	conf_delete();
+	closelog();
 	exit(0);
 }
 
@@ -72,15 +71,7 @@ static void usage(const char *a0)
 
 static void log_init(void)
 {
-	mylog_reset();
-	mylog_set_target(LOGTARGET_STDERR);
-	mylog_set_target(LOGTARGET_SYSLOG, APPNAME, LOG_DAEMON);
-	if (conf_get_log_level() == L_DEBUG) {
-		mylog_set_target(LOGTARGET_STDERR);
-	} else {
-		//TODO:
-		//mylog_set_target(LOGTARGET_STDERR);
-	}
+	openlog("id_service", LOG_PERROR|LOG_PID|LOG_NDELAY, LOG_DAEMON);
 }
 
 static void version(void)
@@ -121,7 +112,7 @@ static rlim_t rlimit_try(rlim_t left, rlim_t right)
 	struct rlimit r;
 
 	if (left>right) {
-		mylog(L_ERR, "call: rlimit_try(%d, %d) is illegal!", left, right);
+		syslog(LOG_ERR, "call: rlimit_try(%d, %d) is illegal!", left, right);
 		abort();
 	}
 	if (left==right || left==right-1) {
@@ -143,7 +134,7 @@ static rlim_t rlimit_try(rlim_t left, rlim_t right)
 
 static void rlimit_init()
 {
-	mylog(L_INFO, "ulimit -n => %d", rlimit_try(1024, conf_get_concurrent_max() * 5 + 1024));
+	syslog(LOG_INFO, "ulimit -n => %d", rlimit_try(1024, conf_get_concurrent_max() * 5 + 1024));
 }
 
 int main(int argc, char **argv)
@@ -179,14 +170,12 @@ int main(int argc, char **argv)
 		daemon(1, 0);
 	}
 
-	mylog_least_level(conf_get_log_level());
-
 	chdir(conf_get_working_dir());
 
 	signal_init();
 
-	if (id_service_init()!=0) {
-		mylog(L_ERR, "Can't create dungeon heart!");
+	if (id_service_start()!=0) {
+		syslog(LOG_ERR, "Can't create dungeon heart!");
 		abort();
 	}
 

@@ -1,6 +1,6 @@
 ################ Edit lines below #################
 
-PREFIX=/usr/local/dungeon
+PREFIX=/usr/local/id_service
 SBINDIR=$(PREFIX)/sbin
 CONFDIR=$(PREFIX)/conf
 LOGDIR=$(PREFIX)/log

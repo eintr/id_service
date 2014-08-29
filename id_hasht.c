@@ -1,9 +1,11 @@
 #include <stdio.h>
+#include <string.h>
+#include <syslog.h>
+#include <alloca.h>
+#include <stddef.h>
 
-#include <ds_hasht.h>
-#include <util_log.h>
-#include <util_misc.h>
-#include <util_atomic.h>
+#include "ds_hasht.h"
+#include "util_atomic.h"
 
 #include "id_hasht.h"
 #include "mod_config.h"
@@ -34,10 +36,10 @@ int id_hasht_init(struct mapped_id_file_st *arr, int nr)
 		if (id_hasht_add(arr[i].hdr)==0) {
 			count++;
 		} else {
-			mylog(L_DEBUG, "Failed to hash id[%d]-%s", i, arr[i].hdr->name);
+			syslog(LOG_DEBUG, "Failed to hash id[%d]-%s", i, arr[i].hdr->name);
 		}
     }
-	mylog(L_DEBUG, "Successfully hashed %d ids.", count);
+	syslog(LOG_DEBUG, "Successfully hashed %d ids.", count);
 	return 0;
 }
 

@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <syslog.h>
+#include <pthread.h>
 
-#include <room_service.h>
-#include <util_atomic.h>
+#include "util_atomic.h"
 
 #include "id_file.h"
 #include "id_hasht.h"
@@ -40,12 +42,12 @@ static int map_array_appand(struct mapped_id_file_st *item)
 int id_pool_init(const char *path)
 {
 	if (id_files_load(path, &map_arr, &nr_map_elm)!=0) {
-		mylog(L_INFO, "id_file_load() failed.");
+		syslog(LOG_INFO, "id_file_load() failed.");
 		return -1;
 	}
 	sz_map_arr = nr_map_elm;
 	if (id_hasht_init(map_arr, nr_map_elm)!=0) {
-		mylog(L_INFO, "id_hasht_init() failed.");
+		syslog(LOG_INFO, "id_hasht_init() failed.");
 		return -1;
 	}
 	return 0;
@@ -60,27 +62,27 @@ int id_create(const char *name, uint64_t start)
 
 	result = id_hasht_lookup(name);
 	if (result!=NULL) {
-		mylog(L_INFO, "id[%s] already exists.", name);
+		syslog(LOG_INFO, "id[%s] already exists.", name);
 		goto fail;
 	}
-	mylog(L_DEBUG, "id[%s] is new.", name);
+	syslog(LOG_DEBUG, "id[%s] is new.", name);
 	fname = id_file_create(name, start);
 	if (fname==NULL) {
-		mylog(L_INFO, "id[%s] id_file_create() failed.", name);
+		syslog(LOG_INFO, "id[%s] id_file_create() failed.", name);
 		goto fail;
 	}
-	mylog(L_INFO, "id[%s] file was created.", name);
+	syslog(LOG_INFO, "id[%s] file was created.", name);
 	if (id_file_map(&newid, fname)!=0) {
-		mylog(L_INFO, "id[%s] id_file_map() failed.", newid.hdr->name);
+		syslog(LOG_INFO, "id[%s] id_file_map() failed.", newid.hdr->name);
 		goto fail1;
 	}
 	map_array_appand(&newid);
 	if (id_hasht_add(newid.hdr)!=0) {
-		mylog(L_INFO, "id[%s] id_hash_add() failed.", newid.hdr->name);
+		syslog(LOG_INFO, "id[%s] id_hash_add() failed.", newid.hdr->name);
 		goto fail1;
 		// TODO: ROLL BACK!
 	}
-	mylog(L_INFO, "id[%s] is hashed.", newid.hdr->name);
+	syslog(LOG_INFO, "id[%s] is hashed.", newid.hdr->name);
 	return 0;
 fail1:
 	free(fname);
@@ -97,7 +99,7 @@ int id_list(MsgIDListEntry ***addr)
 	pthread_mutex_lock(&mut_map_arr);
 	*addr = malloc( sizeof(MsgIDListEntry*)*nr_map_elm + sizeof(MsgIDListEntry)*nr_map_elm);
 	if (*addr==NULL) {
-		mylog(L_INFO, "%s: Memory exhausted!", __FUNCTION__);
+		syslog(LOG_INFO, "%s: Memory exhausted!", __FUNCTION__);
 		abort();
 	}
 	index = (void*)*addr;

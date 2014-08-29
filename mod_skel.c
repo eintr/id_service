@@ -8,8 +8,6 @@
 	This is a test module, it reflects every byte of the socket.
 */
 
-#include <room_service.h>
-
 #include "id_api_listener.h"
 
 #include "mod_config.h"
@@ -40,12 +38,4 @@ static cJSON *mod_serialize(void)
 {
 	return NULL;
 }
-
-module_interface_t MODULE_INTERFACE_SYMB = 
-{
-	.mod_initializer = mod_init,
-	.mod_destroier = mod_destroy,
-	.mod_maintainer = mod_maint,
-	.mod_serialize = mod_serialize,
-};
 

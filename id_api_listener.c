@@ -38,7 +38,7 @@ static int get_config(cJSON *conf)
 
 	value = cJSON_GetObjectItem(conf, "LocalAddr");
 	if (value->type != cJSON_String) {
-		mylog(L_INFO, "Module is configured with illegal LocalAddr.");
+		syslog(L_INFO, "Module is configured with illegal LocalAddr.");
 		return -1;
 	} else {
 		Host = value->valuestring;
@@ -46,7 +46,7 @@ static int get_config(cJSON *conf)
 
 	value = cJSON_GetObjectItem(conf, "LocalPort");
 	if (value->type != cJSON_Number) {
-		mylog(L_INFO, "Module is configured with illegal LocalPort.");
+		syslog(L_INFO, "Module is configured with illegal LocalPort.");
 		return -1;
 	} else {
 		sprintf(Port, "%d", value->valueint);
@@ -54,7 +54,7 @@ static int get_config(cJSON *conf)
 
 	ga_err = getaddrinfo(Host, Port, &hint, &id_module_config.id_api_addr);
 	if (ga_err) {
-		mylog(L_INFO, "Module configured with illegal LocalAddr and LocalPort.");
+		syslog(L_INFO, "Module configured with illegal LocalAddr and LocalPort.");
 		return -1;
 	}
 
@@ -63,9 +63,9 @@ static int get_config(cJSON *conf)
 		strncpy(tmp_path, conf_get_working_dir(), 1024);
 		strncat(tmp_path, "/conf", 1024);
 		id_module_config.id_config_dir = strdup(tmp_path);
-		mylog(L_INFO, "ID_Config_Dir unconfigured, using default:%s.", id_module_config.id_config_dir);
+		syslog(L_INFO, "ID_Config_Dir unconfigured, using default:%s.", id_module_config.id_config_dir);
 	} else if (value->type != cJSON_String) {
-		mylog(L_INFO, "Module configured an illegal or missing .");
+		syslog(L_INFO, "Module configured an illegal or missing .");
 		return -1;
 	} else {
 		id_module_config.id_config_dir = strdup(value->valuestring);
@@ -74,13 +74,13 @@ static int get_config(cJSON *conf)
 	value = cJSON_GetObjectItem(conf, "Restart_Forward_mil");
 	if (value==NULL) {
 		id_module_config.restart_forward_millesimal = 1;
-		mylog(L_INFO, "Restart_Forward_mil unconfigured, using default value:%d.", id_module_config.restart_forward_millesimal);
+		syslog(L_INFO, "Restart_Forward_mil unconfigured, using default value:%d.", id_module_config.restart_forward_millesimal);
 	} else if (value->type != cJSON_Number) {
-		mylog(L_INFO, "Module configured an invalid type Restart_Forward_mil.");
+		syslog(L_INFO, "Module configured an invalid type Restart_Forward_mil.");
 		return -1;
 	} else if (value->valueint<0 || value->valueint>1000) {
 		id_module_config.restart_forward_millesimal = 1;
-		mylog(L_INFO, "Module configured Restart_Forward_mil is weired, using default value %d.", id_module_config.restart_forward_millesimal);
+		syslog(L_INFO, "Module configured Restart_Forward_mil is weired, using default value %d.", id_module_config.restart_forward_millesimal);
 	} else {
 		id_module_config.restart_forward_millesimal = value->valueint;
 	}
@@ -89,7 +89,7 @@ static int get_config(cJSON *conf)
 	if (value==NULL) {
 		// Use default value.
 	} else if (value->type != cJSON_Number) {
-		mylog(L_INFO, "Module is configured with illegal Recv_API_TimeOut_ms.");
+		syslog(L_INFO, "Module is configured with illegal Recv_API_TimeOut_ms.");
 		return -1;
 	} else {
 		id_module_config.rcv_api_timeout_ms = value->valueint;
@@ -99,7 +99,7 @@ static int get_config(cJSON *conf)
 	if (value==NULL) {
 		// Use default value.
 	} else if (value->type != cJSON_Number) {
-		mylog(L_INFO, "Module is configured with illegal Send_API_TimeOut_ms.");
+		syslog(L_INFO, "Module is configured with illegal Send_API_TimeOut_ms.");
 		return -1;
 	} else {
 		id_module_config.snd_api_timeout_ms = value->valueint;
@@ -117,7 +117,7 @@ static int mod_init(cJSON *conf)
 	}
 
 	if (id_pool_init(id_module_config.id_config_dir)!=0) {
-		mylog(L_ERR, "id_pool_init() failed.");
+		syslog(LOG_ERR, "id_pool_init() failed.");
 		return -1;
 	}
 
@@ -129,10 +129,10 @@ static int mod_init(cJSON *conf)
 
 	id_listener = imp_summon(l_mem, &listener_soul);
 	if (id_listener==NULL) {
-		mylog(L_ERR, "imp_summon() Failed!\n");
+		syslog(LOG_ERR, "imp_summon() Failed!\n");
 		return -1;
 	}
-	mylog(L_DEBUG, MOD_NAME ": Module init OK.");
+	syslog(L_DEBUG, MOD_NAME ": Module init OK.");
 	return 0;
 }
 
@@ -158,7 +158,7 @@ static cJSON *mod_serialize(void)
 static void *listener_new(struct listener_memory_st *lmem)
 {
 	//if (imp_set_ioev(lmem->listen->sd, EPOLLIN|EPOLLRDHUP)<0) {
-	//	mylog(L_ERR, "Set listen socket epoll event FAILED: %m\n");
+	//	syslog(LOG_ERR, "Set listen socket epoll event FAILED: %m\n");
 	//}
 
 	return NULL;
@@ -182,7 +182,7 @@ static enum enum_driver_retcode listener_driver(struct listener_memory_st *lmem)
 	while (conn_tcp_accept_nb(&conn, lmem->listen, NULL)==0) {
 		server = id_api_summon(conn);
 		if (server==NULL) {
-			mylog(L_ERR, "Failed to summon a new api imp.");
+			syslog(LOG_ERR, "Failed to summon a new api imp.");
 			conn_tcp_close_nb(conn);
 			continue;
 		}

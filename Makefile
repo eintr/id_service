@@ -4,14 +4,14 @@ INSTALL_PREFIX=/usr/local/titans/id_service
 
 TARGET=titans_id_service
 
-sources=main.c conf.c util_log.c mod_skel.c id_msg_body.pb-c.c id_msg_header.c id_hasht.c id_api.c id_file.c id_api_listener.c id_msg_proc_get.c id_msg_proc_create.c id_msg_proc_list.c id_pool.c cJSON.c
+sources=main.c conf.c id_service.c ds_hasht.c id_msg_body.pb-c.c id_msg_header.c id_hasht.c id_api.c id_file.c id_msg_proc_get.c id_msg_proc_create.c id_msg_proc_list.c id_pool.c cJSON.c
 
 objects=$(sources:.c=.o)
 
-CFLAGS+=-D_GNU_SOURCE
+CFLAGS+=-D_GNU_SOURCE -pthread
 
 #LDFLAGS+=`pkg-config --libs 'libprotobuf-c >= 1.0.0'`
-LDFLAGS+=-lprotobuf-c
+LDFLAGS+=-lprotobuf-c -pthread -lm
 
 all: $(TARGET)
 

@@ -32,8 +32,6 @@ struct id_msg_header_st {
 
 /* =========================================== */
 
-#include <util_conn_tcp.h>
-
 struct id_msg_buf_st {
 	uint8_t *buf;
 	struct id_msg_header_st *hdr;	// Always == buf, for convenions.
@@ -50,7 +48,7 @@ enum {
 	RCV_ERROR
 };
 
-int id_msg_recv_generic(conn_tcp_t *conn, struct id_msg_buf_st *b, int version, int command);
+int id_msg_recv_generic(int sd, struct id_msg_buf_st *b, int version, int command);
 void id_msg_buf_free(struct id_msg_buf_st *b);
 
 #endif
