@@ -20,6 +20,8 @@ void *thr_worker(void *p)
 
 	id_api_enter(sd);
 
+	close(sd);
+
 	return NULL;
 }
 
