@@ -7,7 +7,6 @@
 /** \endcond */
 
 #include "ds_hasht.h"
-#include "util_log.h"
 
 struct node_st {
 	hashval_t keyval;
