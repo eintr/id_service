@@ -2,7 +2,7 @@
 #define ID_FILE_FORMAT_H
 
 #include <stdint.h>
-#include <time.h>
+#include <sys/time.h>
 
 #define	FILE_CLEAN	0x00000000UL
 #define	FILE_DIRTY	0x00000001UL
