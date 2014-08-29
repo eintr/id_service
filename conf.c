@@ -53,8 +53,15 @@ int conf_new(const char *filename)
 		conf = cJSON_fParse(fp);
 		fclose(fp);
 		ret = conf_load_json(conf);
+		if (conf_check_legal(conf)==0) {
+			global_conf = conf;
+			ret = 0;
+		} else {
+			ret = -1;
+		}
 	} else {
 		global_conf = conf_create_default_config();
+		ret = 0;
 	}
 
 	return ret;
