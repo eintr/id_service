@@ -30,9 +30,8 @@ install: all
 	[ -d $(PREFIX) ] || mkdir -p $(PREFIX)
 	[ -d $(SBINDIR) ] || mkdir $(SBINDIR)
 	[ -d $(CONFDIR) ] || mkdir $(CONFDIR)
-
 	$(INSTALL) $(TARGET) $(SBINDIR)
-	$(INSTALL) conf.example $(CONFDIR)/$(APPNAME).conf
+	[ -f $(CONFDIR)/$(APPNAME).conf ] || $(INSTALL) conf.example $(CONFDIR)/$(APPNAME).conf
 
 test: ../../cJSON.o ../../util_syscall.o ../../util_log.o ../../ds_hasht.o id_hasht.c id_file.c testmain.c
 	gcc -DTEST $(CFLAGS) -o $@ $^ $(LDFALGS) -pthread -lm

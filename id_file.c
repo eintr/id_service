@@ -141,7 +141,7 @@ int id_file_map(struct mapped_id_file_st *res, const char *fname)
 	}
 	fd = open(fname, O_RDWR);
 	if (fd<0) {
-		syslog(LOG_INFO, "open(%s) failed: %m.", fname);
+		syslog(LOG_WARNING, "open(%s) failed: %m.", fname);
 		return -1;
 	}
 	if (analysis_id_fd(fd)!=0) {

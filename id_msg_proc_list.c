@@ -43,12 +43,16 @@ static void *imp_new(struct mem_st *mem)
 
 static int imp_delete(struct mem_st *mem)
 {
+/*
 	if (mem->rcvbuf) {
 		if (mem->rcvbuf->buf) {
 			free(mem->rcvbuf->buf);
+			mem->rcvbuf->buf = NULL;
 		}
 		free(mem->rcvbuf);
+		mem->rcvbuf = NULL;
 	}
+*/
 	if (mem->sndbuf.buf) {
 		id_msg_buf_free(&mem->sndbuf);
 	}
@@ -109,6 +113,7 @@ static int imp_driver_prepare_rsp(struct mem_st *mem)
 
 	msg_idlist_req__free_unpacked(mem->req, NULL);
 	free(mem->rsp.list);
+	mem->rsp.list = NULL;
 	mem->req = NULL;
 
 	mem->state = ST_SEND_RSP;

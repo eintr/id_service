@@ -47,12 +47,16 @@ static void *imp_new(struct mem_st *mem)
 
 static int imp_delete(struct mem_st *mem)
 {
+/*
 	if (mem->rcvbuf) {
 		if (mem->rcvbuf->buf) {
 			free(mem->rcvbuf->buf);
+			mem->rcvbuf->buf = NULL;
 		}
 		free(mem->rcvbuf);
+		mem->rcvbuf = NULL;
 	}
+*/
 	if (mem->sndbuf.buf) {
 		id_msg_buf_free(&mem->sndbuf);
 	}

@@ -83,6 +83,7 @@ int id_create(const char *name, uint64_t start)
 		// TODO: ROLL BACK!
 	}
 	syslog(LOG_INFO, "id[%s] is hashed.", newid.hdr->name);
+	free(fname);
 	return 0;
 fail1:
 	free(fname);

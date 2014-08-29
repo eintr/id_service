@@ -230,14 +230,6 @@ int conf_get_s_timeout(void)
 
 static int conf_check_legal(cJSON *conf)
 {
-	int LogLevel;
-	char *id_dir;
-	cJSON *Modules;
-
-	LogLevel = conf_get_log_level();
-	if (LogLevel < 0)
-		return -1;
-
 	return 0;
 }
 
