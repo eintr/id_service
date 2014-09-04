@@ -8,7 +8,7 @@
 #include "id_msg_body.pb-c.h"
 
 #define	ADDR	"127.0.0.1"
-#define PORT	19990
+#define PORT	19999
 
 static char *idname;
 
