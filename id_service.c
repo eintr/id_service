@@ -48,7 +48,7 @@ void id_service_start(void)
 	setsockopt(listen_sd, SOL_SOCKET, SO_REUSEADDR, &true, sizeof(true));
 
 	local_addr.sin_family = AF_INET;
-	local_addr.sin_port = htons(DEFAULT_MONITOR_PORT);
+	local_addr.sin_port = htons(conf_get_local_port());
 	local_addr.sin_addr.s_addr = 0;
 	if (bind(listen_sd, (void*)&local_addr, sizeof(local_addr))<0) {
 		perror("bind()");
